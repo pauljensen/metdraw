@@ -1,4 +1,3 @@
-
 from __future__ import division
 
 import xml.etree.ElementTree as etree
@@ -8,6 +7,7 @@ import csv
 def floordiv(num,by):
     return (int(num // by), num % by)
 
+# TODO:  change to dict
 Black   = (0,0,0)
 White   = (1,1,1)
 Red     = (1,0,0)
