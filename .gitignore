@@ -1,3 +1,8 @@
+# metdraw output file
+*.pdf
+*.svg
+*.dot
+
 *.py[cod]
 
 # C extensions
@@ -33,3 +38,5 @@ nosetests.xml
 .mr.developer.cfg
 .project
 .pydevproject
+.idea
+
