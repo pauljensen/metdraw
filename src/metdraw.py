@@ -5,6 +5,9 @@ import minors as Minors
 import sbml, layout
 
 import argparse, os
+import json as JSON
+
+DEFAULTS_JSON_FILENAME = os.path.dirname(os.path.realpath(__file__)) + "/metdraw_defaults.json"
 
 desc = "Draw maps of metabolic reactions."
 parser = argparse.ArgumentParser(description=desc,prog="metdraw")
@@ -26,62 +29,37 @@ parser.add_argument('-o','--output',dest="output",
                     help="output file format")
 parser.add_argument('-p','--param',dest='param',
                     help="layout parameters")
+parser.add_argument('--json',action='store_true',dest='json',
+                    help="output JSON objects")
 
-defaults = dict(
-    COMPARTMENT_FONTSIZE = 128,
-    SUBSYSTEM_FONTSIZE = 64,
-    CLUSTER_SUBSYSTEMS = False,
-    SUBSYSTEM_BORDER_STYLE = 'solid',
-    CLONE_LEVEL = 8,
-    LINK_CLONES = False,
-    CLONE_LINK_ATTRS = dict(weight=0.000001,
-                            color="lightcoral",
-                            style="dashed",
-                            penwidth=1,
-                            len=1.0),
+def json_unicode_to_str(obj):
+    # replace all unicode strings in a JSON object with str objects
+    new = {}
+    for k,v in obj.items():
+        new_k = str(k) if isinstance(k,unicode) else k
+        if isinstance(v,unicode):
+            new_v = str(v)
+        elif isinstance(v,dict):
+            new_v = json_unicode_to_str(v)
+        else:
+            new_v = v
+        new[new_k] = new_v
+    return new
+# load the default configuration parameters
+defaults = json_unicode_to_str(JSON.load(open(DEFAULTS_JSON_FILENAME)))
 
-    INVISIBLE_NODE_ATTRS = dict(label="",
-                                shape="point",
-                                width=0,
-                                color="transparent"),
+def to_fn(key):
+    # convert a string to a lambda expression in defaults
+    if key in defaults:
+        defaults[key] = eval(defaults[key])
+# these two parameters are stored as strings in JSON, but should really be lambdas
+to_fn("METABOLITE_LABEL_TRANSFORM")
+to_fn("REACTION_LABEL_TRANSFORM")
 
-    EDGE_ATTRS = dict(color="purple",
-                      fontcolor="grey",
-                      fontsize=12,
-                      penwidth=8),
-
-    MET_ATTRS = dict(color="darkorange4",
-                     style="filled",
-                     fillcolor="orange",
-                     fontsize=12,
-                     width=0.35,
-                     fixedsize="true",
-                     shape="circle"),
-    
-    MINOR_MET_ATTRS = dict(color="darkorange4",
-                          style="filled",
-                          fillcolor="orange",
-                          fontsize=10,
-                          width=0.2,
-                          fixedsize="true",
-                          shape="circle"),
-                
-    CLUSTER_MINORS = False,
-    #ADD_MINOR_LINKS = False,
-    #ADD_MAJOR_LINKS = False,
-    SHOW_MINORS = True,
-    SHOW_EXCHANGES = False,
-    MAX_MINORS = 1000,
-    COMPACT = False,
-    #FORCE_LABELS = True,
-    
-    METABOLITE_LABEL_TRANSFORM = lambda x: x,
-    REACTION_LABEL_TRANSFORM = lambda x: x
-)
 
 def metdraw(filename,count_mets=None,met_file=None,show=False,
             engine='fdp',output='pdf',quiet=False,q='1',Ln='1000',
-            defaults=defaults):
+            json=False,defaults=defaults):
     if not quiet:
         print 'Loading model file', filename
     model = Model.build_model(*sbml.parse_sbml_file(file=filename))
@@ -92,7 +70,9 @@ def metdraw(filename,count_mets=None,met_file=None,show=False,
         if not quiet:
             print 'Writing metabolite counts to file', filename+'.mets'
         Minors.write_met_file(Minors.count_species(model),
-                              filename=filename+'.mets')
+                              filename=filename+'.mets',
+                              json=json)
+        return
     
     if met_file:
         minors = Minors.read_met_file(filename=met_file)
@@ -150,6 +130,8 @@ if __name__ == '__main__':
         metdraw_args['Ln'] = args.Ln
     if args.output:
         metdraw_args['output'] = args.output
+    if args.json:
+        metdraw_args['json'] = args.json
         
     if args.param:
         params = eval('dict({0})'.format(args.param))

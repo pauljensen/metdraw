@@ -1,0 +1,54 @@
+{
+    "COMPARTMENT_FONTSIZE" : 128,
+    "SUBSYSTEM_FONTSIZE" : 64,
+    "CLUSTER_SUBSYSTEMS" : false,
+    "SUBSYSTEM_BORDER_STYLE" : "solid",
+    "CLONE_LEVEL" : 8,
+    "LINK_CLONES" : false,
+    "CLONE_LINK_ATTRS" : {
+        "weight" : 0.000001,
+        "color" : "lightcoral",
+        "style" : "dashed",
+        "penwidth" : 1,
+        "len" : 1.0
+    },
+    "INVISIBLE_NODE_ATTRS" : {
+        "label" : "",
+        "shape" : "point",
+        "width" : 0,
+        "color" : "transparent"
+    },
+    "EDGE_ATTRS" : {
+        "color" : "purple",
+        "fontcolor" : "grey",
+        "fontsize" : 12,
+        "penwidth" : 8
+    },
+    "MET_ATTRS" : {
+        "color" : "darkorange",
+        "style" : "filled",
+        "fillcolor" : "orange",
+        "fontsize" : 12,
+        "width" : 0.35,
+        "fixedsize" : "true",
+        "shape" : "circle"
+    },
+    "MINOR_MET_ATTRS" : {
+        "color" : "darkorange",
+        "sytle" : "filled",
+        "fillcolor" : "orange",
+        "fontsize" : 10,
+        "width" : 0.2,
+        "fixedsize" : "true",
+        "shape" : "circle"
+    },
+    "CLUSTER_MINORS" : false,
+    "SHOW_MINORS" : true,
+    "SHOW_EXCHANGES" : false,
+    "MAX_MINORS" : 1000,
+    "COMPACT" : false,
+    "METABOLITE_LABEL_TRANSFORM" : "lambda x : x",
+    "REACTION_LABEL_TRANSFORM" : "lambda x : x",
+
+    "MINOR_MET_FRACTION" : 0.01
+}

@@ -11,26 +11,57 @@ class SpeciesCounter(object):
     def count(self,species):
         for sp in species:
             self.count_single(sp)
-            
+
+    def get_sorted_metcounts(self):
+        metcounts = [MetCount(sid,count) for sid,count in self.counts.items()]
+        return sorted(metcounts, key=lambda x: x.count, reverse=True)
+
+class MetCount(object):
+    def __init__(self,sid,count):
+        self.count = count
+        self.sid = sid
+        self.is_minor = False
+
+    def to_metfile_string(self):
+        if self.minor:
+            return str(self.count) + "\t*" + self.sid
+        else:
+            return str(self.count) + "\t" + self.sid
+
+    def to_json_object(self):
+        s = '{"name" : "' + self.sid + '", "count" : ' + str(self.count)
+        s += ', "minor" : ' + ("true" if self.minor else "false") + '}'
+        return s
+
 def count_species(model):
     counter = SpeciesCounter()
     def count(rxn):
         counter.count(rxn.species)
     model.apply_to_reactions(count)
-    return counter.counts
+    metcounts = counter.get_sorted_metcounts()
 
-def to_sorted_pairs(counts):
-    return sorted([(cnt,sid) for sid,cnt in counts.items()],
-                  key=lambda x: x[0],reverse=True)
+    # set each as minor or major
+    frac = model.get_param("MINOR_MET_FRACTION")
+    nrxns = float(model.number_of_reactions)
+    for m in metcounts:
+        m.minor = m.count / nrxns > frac
+    return metcounts
 
-def display_counts(counts):
-    for cnt,sid in to_sorted_pairs(counts):
-        print(cnt,sid)
+def display_counts(metcounts):
+    for m in metcounts:
+        print(m.to_metfile_string())
     
-def write_met_file(counts,filename="out.mets"):
-    with open(filename,'w') as outfile:
-        for cnt,sid in to_sorted_pairs(counts):
-            print(cnt,sid,sep="\t",file=outfile)
+def write_met_file(metcounts,filename="out.mets",json=False):
+    if json:
+        with open(filename + ".json",'w') as outfile:
+            print('{\n  "minor_counts" : [', file=outfile)
+            objs = ['    ' + m.to_json_object() for m in metcounts]
+            print(',\n'.join(objs), file=outfile)
+            print('  ]\n}\n', file=outfile)
+    else:
+        with open(filename,'w') as outfile:
+            for m in metcounts:
+                print(m.to_metfile_string())
 
 def read_met_file(filename):
     minors = []

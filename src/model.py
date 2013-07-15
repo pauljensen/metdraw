@@ -263,6 +263,14 @@ class Model(Parameterized):
     def apply_to_reactions(self,f,**kwargs):
         for comp in self.compartments:
             comp.apply_to_reactions(f,**kwargs)
+
+    @property
+    def number_of_reactions(self):
+        n = [0]
+        def counter(rxn):
+            n[0] += 1
+        self.apply_to_reactions(counter)
+        return n[0]
     
     def display(self):
         print "Model",self.name
