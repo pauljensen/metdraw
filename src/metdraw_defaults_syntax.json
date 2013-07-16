@@ -1,0 +1,21 @@
+{
+          "COMPARTMENT_FONTSIZE" : { "type": "number",  "show": "text" },
+            "SUBSYSTEM_FONTSIZE" : { "type": "number",  "show": "text" },
+            "CLUSTER_SUBSYSTEMS" : { "type": "boolean", "show": "checkbox" },
+        "SUBSYSTEM_BORDER_STYLE" : { "type": "string",  "show": "text" },
+                   "CLONE_LEVEL" : { "type": "number",  "show": "text" },
+                   "LINK_CLONES" : { "type": "boolean", "show": "checkbox" },
+              "CLONE_LINK_ATTRS" : { "type": "object",  "show": "textarea" },
+          "INVISIBLE_NODE_ATTRS" : { "type": "object",  "show": "textarea" },
+                    "EDGE_ATTRS" : { "type": "object",  "show": "textarea" },
+                     "MET_ATTRS" : { "type": "object",  "show": "textarea" },
+               "MINOR_MET_ATTRS" : { "type": "object",  "show": "textarea" },
+                "CLUSTER_MINORS" : { "type": "boolean", "show": "checkbox" },
+                   "SHOW_MINORS" : { "type": "boolean", "show": "checkbox" },
+                "SHOW_EXCHANGES" : { "type": "boolean", "show": "checkbox" },
+                    "MAX_MINORS" : { "type": "number",  "show": "text" },
+                       "COMPACT" : { "type": "boolean", "show": "checkbox" },
+    "METABOLITE_LABEL_TRANSFORM" : { "type": "string",  "show": "text" },
+      "REACTION_LABEL_TRANSFORM" : { "type": "string",  "show": "text" },
+            "MINOR_MET_FRACTION" : { "type": "number",  "show": "none" }
+}
