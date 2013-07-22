@@ -290,9 +290,9 @@ def clone_mets(subsystem):
             link_edges.append(Node(sid,label=sid))
     
     counts = minors.count_species(subsystem)
-    for sid,count in counts.items():
-        if count >= CLONE_LEVEL:
-            clone_out(sid)
+    for count in counts:
+        if count.count >= CLONE_LEVEL:
+            clone_out(count.sid)
     return link_edges
 
 def subsystem_to_dot(subsystem):

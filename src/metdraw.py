@@ -2,7 +2,7 @@
 
 import model as Model
 import minors as Minors
-import sbml, layout
+import sbml, layout, util
 
 import argparse, os
 import json as JSON
@@ -31,22 +31,14 @@ parser.add_argument('-p','--param',dest='param',
                     help="layout parameters")
 parser.add_argument('--json',action='store_true',dest='json',
                     help="output JSON objects")
+parser.add_argument('--engine',dest='engine',
+                    help="rendering engine used by Graphviz (fdp or sfdp)")
+parser.add_argument('--norun',action='store_true',dest='norun',
+                    help="do not run Graphviz")
 
-def json_unicode_to_str(obj):
-    # replace all unicode strings in a JSON object with str objects
-    new = {}
-    for k,v in obj.items():
-        new_k = str(k) if isinstance(k,unicode) else k
-        if isinstance(v,unicode):
-            new_v = str(v)
-        elif isinstance(v,dict):
-            new_v = json_unicode_to_str(v)
-        else:
-            new_v = v
-        new[new_k] = new_v
-    return new
+
 # load the default configuration parameters
-defaults = json_unicode_to_str(JSON.load(open(DEFAULTS_JSON_FILENAME)))
+defaults = util.parse_json_file(DEFAULTS_JSON_FILENAME)
 
 def to_fn(key):
     # convert a string to a lambda expression in defaults
@@ -59,7 +51,7 @@ to_fn("REACTION_LABEL_TRANSFORM")
 
 def metdraw(filename,count_mets=None,met_file=None,show=False,
             engine='fdp',output='pdf',quiet=False,q='1',Ln='1000',
-            json=False,defaults=defaults):
+            json=False,norun=False,defaults=defaults):
     if not quiet:
         print 'Loading model file', filename
     model = Model.build_model(*sbml.parse_sbml_file(file=filename))
@@ -77,7 +69,7 @@ def metdraw(filename,count_mets=None,met_file=None,show=False,
     if met_file:
         minors = Minors.read_met_file(filename=met_file)
         if not quiet:
-            print len(minors), "minors loaded from file", met_file
+            print len(minors), "minors loaded from file '{0}'".format(met_file)
         model.set_param(name="minors",value=minors)
         
     if show:
@@ -93,7 +85,7 @@ def metdraw(filename,count_mets=None,met_file=None,show=False,
     
     # run graphviz
     if not quiet:
-        print 'Running GRAPHVIZ:'
+        print 'Preparing Graphviz call:'
     cmdstr = 'dot -q{q} -Ln{Ln} -K{engine} -T{fmt} -O {file}'
     cmd = cmdstr.format(q=q,Ln=Ln,
                         engine=engine,
@@ -101,9 +93,13 @@ def metdraw(filename,count_mets=None,met_file=None,show=False,
                         file=filename+'.dot')
     if not quiet:
         print '   ' + cmd
-    error = os.system(cmd)
-    if error:
-        print "Error running dot:", error
+    if not norun:
+        print 'Running Graphviz'
+        error = os.system(cmd)
+        if error:
+            print "Error running dot:", error
+    else:
+        print 'ok'
 
 def update_defaults(params):
     for k,v in params.iteritems():
@@ -132,6 +128,10 @@ if __name__ == '__main__':
         metdraw_args['output'] = args.output
     if args.json:
         metdraw_args['json'] = args.json
+    if args.engine:
+        metdraw_args['engine'] = args.engine
+    if args.norun:
+        metdraw_args['norun'] = args.norun
         
     if args.param:
         params = eval('dict({0})'.format(args.param))

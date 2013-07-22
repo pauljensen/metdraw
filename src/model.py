@@ -140,6 +140,7 @@ class Reaction(Parameterized):
         self.products = (self.major_products
                           + consolidate(self.minor_products))
 
+
 class Subsystem(Parameterized):
     def __init__(self,sid,name,reactions=None):
         Parameterized.__init__(self)
@@ -164,6 +165,14 @@ class Subsystem(Parameterized):
     def apply_to_reactions(self,f,**kwargs):
         for rxn in self.reactions:
             f(rxn,**kwargs)
+
+    @property
+    def number_of_reactions(self):
+        n = [0]
+        def counter(rxn):
+            n[0] += 1
+        self.apply_to_reactions(counter)
+        return n[0]
     
     def display(self,indent=''):
         print indent+str(len(self.reactions)),self.name
@@ -224,6 +233,14 @@ class Compartment(Parameterized):
         else:
             for rxn in self.exchanges:
                 f(rxn,**kwargs)
+
+    @property
+    def number_of_reactions(self):
+        n = [0]
+        def counter(rxn):
+            n[0] += 1
+        self.apply_to_reactions(counter)
+        return n[0]
     
     def display(self,indent=''):
         new_indent = indent + '   '

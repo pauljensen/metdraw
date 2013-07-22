@@ -1,5 +1,7 @@
 
 from __future__ import print_function
+import util
+import json as JSON
 
 class SpeciesCounter(object):
     def __init__(self):
@@ -20,7 +22,7 @@ class MetCount(object):
     def __init__(self,sid,count):
         self.count = count
         self.sid = sid
-        self.is_minor = False
+        self.minor = False
 
     def to_metfile_string(self):
         if self.minor:
@@ -61,13 +63,19 @@ def write_met_file(metcounts,filename="out.mets",json=False):
     else:
         with open(filename,'w') as outfile:
             for m in metcounts:
-                print(m.to_metfile_string())
+                print(m.to_metfile_string(), file=outfile)
 
 def read_met_file(filename):
     minors = []
-    with open(filename) as infile:
-        for line in iter(infile):
-            _,_,name = line.partition("\t")
-            if name[0] == '*':
-                minors.append(name.rstrip()[1:])
+    json = filename.endswith('.json')
+    if json:
+        for minor in util.parse_json_file(filename)['minor_counts']:
+            if minor['minor']:
+                minors.append(minor['name'])
+    else:
+        with open(filename) as infile:
+            for line in iter(infile):
+                _,_,name = line.partition("\t")
+                if name[0] == '*':
+                    minors.append(name.rstrip()[1:])
     return minors
