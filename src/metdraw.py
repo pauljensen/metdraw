@@ -35,23 +35,46 @@ parser.add_argument('--engine',dest='engine',
                     help="rendering engine used by Graphviz (fdp or sfdp)")
 parser.add_argument('--norun',action='store_true',dest='norun',
                     help="do not run Graphviz")
+parser.add_argument('-c','--config',dest='config',
+                    help='JSON configuration file for default parameters')
+parser.add_argument('--status',action='store_true',dest='status',
+                    help="record status in temp file")
+parser.add_argument('--dotcmd',dest='dotcmd',
+                    help="DOT command")
 
+
+defaults = {}
+
+def read_json_config_file(filename):
+    defaults.clear()
+    defaults.update(util.parse_json_file(filename))
+    def to_fn(key):
+        # convert a string to a lambda expression in defaults
+        if key in defaults:
+            defaults[key] = eval(defaults[key])
+    # these two parameters are stored as strings in JSON, but should really be lambdas
+    to_fn("METABOLITE_LABEL_TRANSFORM")
+    to_fn("REACTION_LABEL_TRANSFORM")
 
 # load the default configuration parameters
-defaults = util.parse_json_file(DEFAULTS_JSON_FILENAME)
+read_json_config_file(DEFAULTS_JSON_FILENAME)
 
-def to_fn(key):
-    # convert a string to a lambda expression in defaults
-    if key in defaults:
-        defaults[key] = eval(defaults[key])
-# these two parameters are stored as strings in JSON, but should really be lambdas
-to_fn("METABOLITE_LABEL_TRANSFORM")
-to_fn("REACTION_LABEL_TRANSFORM")
-
+def display_parameters(params):
+    print "MetDraw Parameters:"
+    for k,v in params.iteritems():
+        print "   ", k, ":", str(v)
 
 def metdraw(filename,count_mets=None,met_file=None,show=False,
-            engine='fdp',output='pdf',quiet=False,q='1',Ln='1000',
-            json=False,norun=False,defaults=defaults):
+            engine='fdp',output='svg',quiet=False,q='1',Ln='1000',
+            json=False,norun=False,status=False,dotcmd='dot',
+            defaults=defaults):
+    #def set_status(string):
+    #    if status:
+    #        with open('METDRAW_STATUS.json','w') as status_file:
+    #            print >>status_file, string
+
+    #set_status('{ "running" : true }\n')
+
     if not quiet:
         print 'Loading model file', filename
     model = Model.build_model(*sbml.parse_sbml_file(file=filename))
@@ -74,6 +97,7 @@ def metdraw(filename,count_mets=None,met_file=None,show=False,
         
     if show:
         model.display()
+        display_parameters(defaults)
     
     if not quiet:
         print 'Creating reaction layout'
@@ -86,8 +110,9 @@ def metdraw(filename,count_mets=None,met_file=None,show=False,
     # run graphviz
     if not quiet:
         print 'Preparing Graphviz call:'
-    cmdstr = 'dot -q{q} -Ln{Ln} -K{engine} -T{fmt} -O {file}'
-    cmd = cmdstr.format(q=q,Ln=Ln,
+    cmdstr = '{dot} -q{q} -Ln{Ln} -K{engine} -T{fmt} -O {file}'
+    cmd = cmdstr.format(dot=dotcmd,
+                        q=q,Ln=Ln,
                         engine=engine,
                         fmt=output,
                         file=filename+'.dot')
@@ -101,6 +126,9 @@ def metdraw(filename,count_mets=None,met_file=None,show=False,
     else:
         print 'ok'
 
+    #set_status('{ "running" : false }\n')
+    #os.remove('METDRAW_STATUS.json')
+
 def update_defaults(params):
     for k,v in params.iteritems():
         if k in defaults:
@@ -112,6 +140,10 @@ def update_defaults(params):
 if __name__ == '__main__':
     args = parser.parse_args()
     metdraw_args = {}
+
+    if args.config:
+        read_json_config_file(args.config)
+
     if args.file:
         metdraw_args['filename'] = args.file
     if args.count_mets:
@@ -132,10 +164,13 @@ if __name__ == '__main__':
         metdraw_args['engine'] = args.engine
     if args.norun:
         metdraw_args['norun'] = args.norun
+    if args.status:
+        metdraw_args['status'] = args.status
+    if args.dotcmd:
+        metdraw_args['dotcmd'] = args.dotcmd
         
     if args.param:
         params = eval('dict({0})'.format(args.param))
         update_defaults(params)
-        
-        
+
     metdraw(**metdraw_args)
