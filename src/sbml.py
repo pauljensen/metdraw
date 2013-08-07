@@ -21,6 +21,11 @@ def findall(elem,tag):
     return [e for e in elem.getiterator() if tagmatch(e,tag)]
 
 def parse_sbml_file(file):
+    # returns a tuple:  (species,reactions,compartments)
+    #   species:  { 'id' : Species(...) }
+    #   reactions:  { 'id' : Reaction(...) }
+    #   compartments { 'id' : ('name','outside') }
+
     tree = ET.ElementTree(file=file)
     model = tree.getroot()[0]
     

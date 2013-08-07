@@ -2,10 +2,9 @@
 
 import model as Model
 import minors as Minors
-import sbml, layout, util
+import sbml, layout, util, json
 
 import argparse, os
-import json as JSON
 
 DEFAULTS_JSON_FILENAME = os.path.dirname(os.path.realpath(__file__)) + "/metdraw_defaults.json"
 
@@ -77,7 +76,10 @@ def metdraw(filename,count_mets=None,met_file=None,show=False,
 
     if not quiet:
         print 'Loading model file', filename
-    model = Model.build_model(*sbml.parse_sbml_file(file=filename))
+    if filename.endswith('.json'):
+        model = Model.build_model(*json.parse_json_file(file=filename))
+    else:
+        model = Model.build_model(*sbml.parse_sbml_file(file=filename))
     model.name = filename
     model.set_param(**defaults)
     
