@@ -2,7 +2,7 @@
 
 import model as Model
 import minors as Minors
-import sbml, layout, util, json
+import sbml, layout, util, model_json
 
 import argparse, os
 
@@ -77,7 +77,7 @@ def metdraw(filename,count_mets=None,met_file=None,show=False,
     if not quiet:
         print 'Loading model file', filename
     if filename.endswith('.json'):
-        model = Model.build_model(*json.parse_json_file(file=filename))
+        model = Model.build_model(*model_json.parse_json_file(file=filename))
     else:
         model = Model.build_model(*sbml.parse_sbml_file(file=filename))
     model.name = filename
