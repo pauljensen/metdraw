@@ -74,7 +74,7 @@ class Species(Parameterized):
     
 class Reaction(Parameterized):
     def __init__(self,rid,name="",reactants=None,products=None,subsystem=None,
-                      reversible=True,compact=False):
+                      reversible=True,gpr=None,genes=None):
         Parameterized.__init__(self)
         self.id = rid
         self.reactants = reactants if reactants else []
@@ -82,6 +82,8 @@ class Reaction(Parameterized):
         self.reversible = reversible
         self.name = name
         self.subsystem = subsystem if subsystem else []
+        self.gpr = gpr
+        self.genes = genes if genes else []
         
         for species in self.reactants:
             species.set_parent(self)

@@ -2,6 +2,9 @@
 
 import argparse
 import colormap
+import copy
+
+import gpr
 
 desc = "Color maps of metabolic reactions."
 parser = argparse.ArgumentParser(description=desc,prog="metcolor")
@@ -19,18 +22,24 @@ parser.add_argument('--breaks',dest="breaks",
                     help="numeric breaks for each color")
 parser.add_argument('--default_color',dest="default_color",
                     help="default color for values outside of colormap")
+parser.add_argument('--gprfile',dest="gprfile",
+                    help="gene/protein/reaction associations")
 
-def metcolor(mapfile=None,datafile=None,header=False,
-             colors=colormap.DEFAULT_MAP):
+
+def metcolor(mapfile=None, datafile=None, header=False,
+             colors=colormap.DEFAULT_COLORSCHEME,gprfile=None):
     mappings = colormap.csv_to_mappings(datafile,header=header)
-    mappings,bounds = colormap.rescale_mappings(mappings)
-    mapper = colormap.create_colormap(colors)
-    n_cond = len(mappings[mappings.keys()[0]])
-    for i in range(n_cond):
-        value_map = colormap.mapping_from_mappings(mappings,i)
-        svg = colormap.load_svg_image(mapfile)
-        colormap.scale_reactions(svg,value_map,mapper)
-        colormap.write_svg_image(svg,filename=str(i+1)+'_'+mapfile)
+    if gprfile:
+        gprmap = gpr.read_gpr_file(gprfile)
+        mappings = {k : gprmap.score_reactions(v) for k,v in mappings.items()}
+    mapper = colormap.Colormapper(colors)
+    mapper.range = colormap.get_range(mappings)
+    svg = colormap.load_svg_image(mapfile)
+    for name,data in mappings.items():
+        condsvg = copy.deepcopy(svg)
+        colormap.scale_reactions(condsvg,data,mapper)
+        colormap.write_svg_image(condsvg,filename=mapfile[:-4]+'__'+name+'.svg')
+
 
 if __name__ == '__main__':
     args = parser.parse_args()
@@ -47,5 +56,7 @@ if __name__ == '__main__':
         metcolor_args['breaks'] = args.breaks
     if args.default_color:
         metcolor_args['default_color'] = args.default_color
+    if args.gprfile:
+        metcolor_args['gprfile'] = args.gprfile
         
     metcolor(**metcolor_args)

@@ -20,8 +20,10 @@ def findfirst(elem,tag):
 def findall(elem,tag):
     return [e for e in elem.getiterator() if tagmatch(e,tag)]
 
-def parse_sbml_file(file):
-    # returns a tuple:  (species,reactions,compartments)
+def parse_sbml_file(file, subsystem_pattern='SUBSYSTEM: *(?P<value>.*\S+.*) *\</',
+                    gpr_pattern='GENE_ASSOCIATION: *(?P<value>.*\S+.*) *\</',
+                    gene_split_pattern=' or | and |[() ]'):
+    # returns a dict:
     #   species:  { 'id' : Species(...) }
     #   reactions:  { 'id' : Reaction(...) }
     #   compartments { 'id' : ('name','outside') }
@@ -74,26 +76,35 @@ def parse_sbml_file(file):
         # parse the subsystem, if available
         notes = findfirst(rxn,'notes')
         notetext = ET.tostring(notes)
-        patt = re.compile('SUBSYSTEM: *(?P<sub>.*\S+.*) *\</')
-        results = patt.search(notetext)
-        if results:
-            subsystem = results.group("sub")
+        def parse_notes(pattern):
+            patt = re.compile(pattern)
+            results = patt.search(notetext)
+            if results:
+                return results.group("value")
+            else:
+                return None
+        subsystem = parse_notes(subsystem_pattern)
+        gpr = parse_notes(gpr_pattern)
+        if gpr:
+            genes = set([x for x in re.split(gene_split_pattern,gpr) if x])
         else:
-            subsystem = None
+            genes = None
         
         return Reaction(rid,
                         name=name,
                         reversible=reversible,
                         reactants=reactants,
                         products=products,
-                        subsystem=subsystem)
+                        subsystem=subsystem,
+                        gpr=gpr,
+                        genes=genes)
     
     reactions = {}
     for rxn in findall(listOfReactions,'reaction'):
         parsed = parse_reaction(rxn)
         reactions[parsed.id] = parsed
 
-    return species,reactions,compartments
+    return dict(species=species, reactions=reactions, compartments=compartments)
 
 
 if __name__ == '__main__':

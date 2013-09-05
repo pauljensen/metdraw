@@ -2,7 +2,7 @@
 
 import model as Model
 import minors as Minors
-import sbml, layout, util, model_json
+import sbml, layout, util, model_json, gpr
 
 import argparse, os
 
@@ -40,6 +40,8 @@ parser.add_argument('--status',action='store_true',dest='status',
                     help="record status in temp file")
 parser.add_argument('--dotcmd',dest='dotcmd',
                     help="DOT command")
+parser.add_argument('--no_gpr',action='store_true',dest='no_gpr',
+                    help="do not save gene/protein/reaction annotations")
 
 
 defaults = {}
@@ -65,21 +67,28 @@ def display_parameters(params):
 
 def metdraw(filename,count_mets=None,met_file=None,show=False,
             engine='fdp',output='svg',quiet=False,q='1',Ln='1000',
-            json=False,norun=False,status=False,dotcmd='dot',
+            json=False,norun=False,status=False,dotcmd='dot',no_gpr=False,
             defaults=defaults):
-    #def set_status(string):
-    #    if status:
-    #        with open('METDRAW_STATUS.json','w') as status_file:
-    #            print >>status_file, string
 
-    #set_status('{ "running" : true }\n')
+    sbml_filename = filename
+    if filename.endswith('.xml'):
+        filename = filename[:-4]
+    dot_filename = filename + '.dot'
+    mets_filename = filename + '.mets'
+    gpr_filename = filename + '.gpr'
+    output_filename = filename + '.' + output
 
     if not quiet:
-        print 'Loading model file', filename
+        print 'Loading model file', sbml_filename
     if filename.endswith('.json'):
-        model = Model.build_model(*model_json.parse_json_file(file=filename))
+        model = Model.build_model(*model_json.parse_json_file(file=sbml_filename))
     else:
-        model = Model.build_model(*sbml.parse_sbml_file(file=filename))
+        pieces = sbml.parse_sbml_file(file=sbml_filename)
+        model = Model.build_model(**pieces)
+        if not no_gpr:
+            gpr.write_gpr_file(gpr.Gpr(pieces['reactions']),gpr_filename)
+            if not quiet:
+                print 'GPR written to file', gpr_filename
     model.name = filename
     model.set_param(**defaults)
     
@@ -87,7 +96,7 @@ def metdraw(filename,count_mets=None,met_file=None,show=False,
         if not quiet:
             print 'Writing metabolite counts to file', filename+'.mets'
         Minors.write_met_file(Minors.count_species(model),
-                              filename=filename+'.mets',
+                              filename=mets_filename,
                               json=json)
         return
     
@@ -95,7 +104,16 @@ def metdraw(filename,count_mets=None,met_file=None,show=False,
         minors = Minors.read_met_file(filename=met_file)
         if not quiet:
             print len(minors), "minors loaded from file '{0}'".format(met_file)
-        model.set_param(name="minors",value=minors)
+    else:
+        # find the minors in the model; for now, we create a temporary mets
+        # file that is deleted after loading the minors
+        temp_filename = mets_filename + '.TEMP'
+        Minors.write_met_file(Minors.count_species(model),filename=temp_filename)
+        minors = Minors.read_met_file(temp_filename)
+        os.remove(temp_filename)
+        if not quiet:
+            print len(minors), "minors found in model"
+    model.set_param(name="minors",value=minors)
         
     if show:
         model.display()
@@ -106,18 +124,19 @@ def metdraw(filename,count_mets=None,met_file=None,show=False,
     g = layout.model_to_dot(model)
     
     if not quiet:
-        print 'Creating DOT file', filename+'.dot'
-    g.to_file(filename+'.dot')
+        print 'Creating DOT file', dot_filename
+    g.to_file(dot_filename)
     
     # run graphviz
     if not quiet:
         print 'Preparing Graphviz call:'
-    cmdstr = '{dot} -q{q} -Ln{Ln} -K{engine} -T{fmt} -O {file}'
+    cmdstr = '{dot} -q{q} -Ln{Ln} -K{engine} -T{fmt} -o {outfile} {file}'
     cmd = cmdstr.format(dot=dotcmd,
                         q=q,Ln=Ln,
                         engine=engine,
                         fmt=output,
-                        file=filename+'.dot')
+                        outfile=output_filename,
+                        file=dot_filename)
     if not quiet:
         print '   ' + cmd
     if not norun:
@@ -128,8 +147,9 @@ def metdraw(filename,count_mets=None,met_file=None,show=False,
     else:
         print 'ok'
 
-    #set_status('{ "running" : false }\n')
-    #os.remove('METDRAW_STATUS.json')
+    # clean up intermediate DOT file
+    os.remove(dot_filename)
+
 
 def update_defaults(params):
     for k,v in params.iteritems():
@@ -170,6 +190,8 @@ if __name__ == '__main__':
         metdraw_args['status'] = args.status
     if args.dotcmd:
         metdraw_args['dotcmd'] = args.dotcmd
+    if args.no_gpr:
+        metdraw_args['no_gpr'] = args.gpr
         
     if args.param:
         params = eval('dict({0})'.format(args.param))

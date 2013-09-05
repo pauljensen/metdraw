@@ -1,34 +1,17 @@
-from __future__ import division
 
 import xml.etree.ElementTree as etree
 import csv
+import math
+
+from colorschemes import colorschemes
 
 
-def floordiv(num,by):
-    return (int(num // by), num % by)
-
-
-
-DEFAULT_MAP = (Blue,White,Red)
+DEFAULT_COLORSCHEME = 'RdBu(3)'
 
 UNLABELED_COLOR = "rgb(220,220,220)"
 
-def create_colormap(colors):
-    n_colors = len(colors)
-    interval_width = 1.0 / (n_colors - 1)
-    
-    def to_rgb_str(normval):
-        # find which interval normval is in
-        n,rem = floordiv(normval,interval_width)
-        left = colors[n]
-        if rem > 1e-5:
-            right = colors[n+1]
-        else:
-            right = colors[n]
-        diff = [r - l for l,r in zip(left,right)]
-        rgbs = tuple([int(255*(l + rem*d)) for l,d in zip(left,diff)])
-        return "rgb({0},{1},{2})".format(rgbs[0],rgbs[1],rgbs[2])
-    return to_rgb_str
+
+# -------------- working with SVG image maps -------------------
 
 def load_svg_image(filename):
     return etree.ElementTree(file=filename)
@@ -54,13 +37,12 @@ def scale_reactions(svg,valuemap,colormap):
         else:
             return None
     
-    #for g in svg.findall('ns0:g'):
     for g in findall(svg,'g'):
         fullname = g.get("id",None)
         if is_reaction(fullname):
             name = get_name(fullname)
             if name in valuemap:
-                color = colormap(valuemap[name])
+                color = colormap.value_to_color(valuemap[name])
             else:
                 color = UNLABELED_COLOR
             path = findfirst(g,"path")
@@ -70,40 +52,102 @@ def scale_reactions(svg,valuemap,colormap):
                 node.set("stroke",color)
                 node.set("fill",color)
                 node.set("style","")
-            
+
 def write_svg_image(svg,filename):
     svg.write(filename)
 
+
+# -------------- working with data files -------------------
+
 def csv_to_mappings(filename,header=False):
-    mappings = {}
+    # Returns a dict where each key is the column name
+    # and each value is a dict of name:value pairs.
+    # If no header is provided, the column names are
+    # "1", "2", ... "n".
+    mappings = []
     f = open(filename,"r")
-    if header:
-        f.next()
+    n = None
+    names = None
+    found_header = False
     for r in csv.reader(f):
-        mappings[r[0]] = [float(i) for i in r[1:]]
-    return mappings
+        if header and not found_header:
+            names = r[1:]
+            found_header = True
+            continue
+        if n is None:
+            n = len(r[1:])
+            mappings = [dict() for i in range(n)]
+        for i,mp in enumerate(mappings):
+            mp[r[0]] = float(r[i+1])
+    if names is None:
+        names = [str(i+1) for i in range(n)]
+    return dict(zip(names,mappings))
 
-def rescale_mappings(mappings):
-    gmax = max([max(x) for x in mappings.values()])
-    gmin = min([min(x) for x in mappings.values()])
-    for k,v in mappings.iteritems():
-        mappings[k] = [(x - gmin) / (gmax - gmin) for x in v]
-    return mappings,(gmin,gmax)
+def get_range(data):
+    # returns global (min,max) from a data file structure
+    # returned by csv_to_mappings
+    mins = [min(v.values()) for v in data.values()]
+    maxs = [max(v.values()) for v in data.values()]
+    return min(mins), max(maxs)
 
-def mapping_from_mappings(mappings,i):
-    mapping = {}
-    for k,v in mappings.iteritems():
-        mapping[k] = v[i]
-    return mapping
 
-if __name__ == '__main__':
-    mappings = csv_to_mappings("../../../work/bsu/becky/normalized_rxn_expression.csv")
-    mapper = create_colormap([Blue,White,Red])
-    for i in range(24):
-        value_map = mapping_from_mappings(mappings,i)
-        svg = load_svg_image("../../../work/bsu/test/neato (copy)/STRIPPED.svg")
-        scale_reactions(svg,value_map,mapper)
-        write_svg_image(svg,filename="../../../work/bsu/test/neato (copy)/condition{0}.svg".format(i+1))
-        print i
-    
-    
+# -------------- colorscheme names & parsing -------------------
+
+def get_colorscheme_names():
+    def get_name(name):
+        scheme = colorschemes[name]
+        crange = min(scheme.keys()), max(scheme.keys())
+        return "{name} ({min}..{max})".format(name=name,min=crange[0],max=crange[1])
+    return sorted([get_name(name) for name in colorschemes.keys()])
+
+def get_colorscheme(name):
+    # examples of allowable names:
+    #   RdBu
+    #   RdBu(3)
+    #   RdBu (3)
+
+    # parse name
+    name = name.rstrip()
+    if '(' in name:
+        name,_,divisions = name.partition('(')
+        name = name.rstrip()
+        divisions = int(divisions.rstrip()[:-1])
+    else:
+        divisions = None
+
+    if name not in colorschemes:
+        raise Exception('colorscheme not found')
+    if divisions is None:
+        divisions = min(colorschemes[name].keys())
+    return colorschemes[name][divisions]
+
+
+# -------------- Mapping colors to RGB values -------------------
+
+class Colormapper(object):
+    def __init__(self,colorscheme):
+        self.colorscheme = colorscheme
+        self.rgbs = get_colorscheme(colorscheme)
+        self.ndiv = len(self.rgbs)
+        self.min, self.max = (0,1)
+
+    @property
+    def range(self):
+        return self.min, self.max
+    @range.setter
+    def range(self,value):
+        self.min, self.max = value
+
+    def value_to_rgb(self,value):
+        width = self.max - self.min
+        if abs(width) < 1e-10:
+            # min == max; everything will scale to zero
+            width = 1
+        x = (value - self.min) / width * (self.ndiv - 1)  # rescale x to 0 .. n-1
+        dist = x - math.floor(x)  # distance into the interval
+        lower = self.rgbs[int(math.floor(x))]  # lower RGB bounds
+        upper = self.rgbs[int(math.ceil(x))]   # upper RGB bounds
+        return [int(l+dist*(u-l)) for l,u in zip(lower,upper)]
+
+    def value_to_color(self,value):
+        return "rgb({0},{1},{2})".format(*self.value_to_rgb(value))

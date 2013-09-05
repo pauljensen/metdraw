@@ -27,6 +27,8 @@ from model import Species, Reaction
 #       ]
 #   }
 
+# TODO:  this format needs to be updated to include gene annotations
+
 def parse_json_file(file):
     # returns a tuple:  (species,reactions,compartments)
     #   species:  { 'id' : Species(...) }
