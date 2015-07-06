@@ -42,6 +42,8 @@ parser.add_argument('--dotcmd',dest='dotcmd',
                     help="DOT command")
 parser.add_argument('--no_gpr',action='store_true',dest='no_gpr',
                     help="do not save gene/protein/reaction annotations")
+parser.add_argument('--test',action='store_true',dest='test',
+                    help="run in testing mode")
 
 
 defaults = {}
@@ -161,6 +163,10 @@ def update_defaults(params):
 
 if __name__ == '__main__':
     args = parser.parse_args()
+
+    if args.test:
+        exit(0)  # do nothing in testing mode
+
     metdraw_args = {}
 
     if args.config:

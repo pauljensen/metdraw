@@ -24,6 +24,8 @@ parser.add_argument('--default_color',dest="default_color",
                     help="default color for values outside of colormap")
 parser.add_argument('--gprfile',dest="gprfile",
                     help="gene/protein/reaction associations")
+parser.add_argument('--test',action='store_true',dest='test',
+                    help="run in testing mode")
 
 
 def metcolor(mapfile=None, datafile=None, header=False,
@@ -43,6 +45,10 @@ def metcolor(mapfile=None, datafile=None, header=False,
 
 if __name__ == '__main__':
     args = parser.parse_args()
+
+    if args.test:
+        exit(0)  # do nothing in testing mode
+
     metcolor_args = {}
     if args.mapfile:
         metcolor_args['mapfile'] = args.mapfile
