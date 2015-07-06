@@ -97,7 +97,9 @@ class Edge(Attr):
     
     def __str__(self):
         sep = "->" if self.directed else "--"
-        return '"{0}" {1} "{2}" {3}'.format(self.tail,sep,self.head,
+        return '"{0}" {1} "{2}" {3}'.format(self.tail.name,
+                                            sep,
+                                            self.head.name,
                                             self.attr_str)
         
     def to_string(self,indent=''):
