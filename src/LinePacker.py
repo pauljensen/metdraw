@@ -84,7 +84,6 @@ class LinePacker(object):
             return "This segment doesn't fit"
   
     def __str__(self):
-        # a helpful string representation that lists the packed segments
         return 'Gaps: ' + str(sorted(self.gaps, key=lambda x: x[0])) + ', ' + 'Segments: ' + str(sorted(self.segments, key=lambda x: x[1]))
 
 
