@@ -35,9 +35,6 @@ class LinePacker(object):
         # which it fits).  After finding the minimum distance, add the segment to the list of segments and split the gap
         # to two smaller gaps (on the left and right sides).  Initialize the object by creating an empty list of segments
         # and a single gap spanning the entire line.
-        #
-        # I also suggest starting the pack method by checking with canfit, which simply checks whether the segment fits
-        # anywhere, regardless of the distance to "near".  This will simplify your assumptions.
         if self.canfit(width):
             half_width = width/2.0
             poss_gaps = []
