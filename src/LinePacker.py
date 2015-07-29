@@ -39,11 +39,11 @@ class LinePacker(object):
             half_width = width/2.0
             poss_gaps = []
             for gap in self.gaps:
-                if gap[1] - gap[0] > width:
+                if gap[1] - gap[0] >= width:
                     poss_gaps.append(gap)
             for poss_gap in poss_gaps:
                 if poss_gap[0] <= near <= poss_gap[1]:
-                    if near - half_width >= poss_gap[0] and near + half_width <= poss_gap[1]:
+                    if (near - half_width) >= poss_gap[0] and (near + half_width) <= poss_gap[1]:
                         seg_start = near - half_width
                         seg_end = near + half_width
                         seg = (seg_start, seg_end)
@@ -65,7 +65,6 @@ class LinePacker(object):
                     return seg + (abs(near-((seg[0] + seg[1]) /2.0)),)
                 else:
                     new_poss_gaps = sorted(self.gap_dist(poss_gaps, near), key=lambda x: x[2])
-                    len_move = new_poss_gaps[0][2]
                     best_gap = new_poss_gaps[0][0:2]
                     if abs(near - best_gap[0]) > abs(near - best_gap[1]):
                         seg = (best_gap[1] - width, best_gap[1])
@@ -85,6 +84,5 @@ class LinePacker(object):
   
     def __str__(self):
         return 'Gaps: ' + str(sorted(self.gaps, key=lambda x: x[0])) + ', ' + 'Segments: ' + str(sorted(self.segments, key=lambda x: x[1]))
-
 
 
