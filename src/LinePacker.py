@@ -90,13 +90,5 @@ class LinePacker(object):
         # a helpful string representation that lists the packed segments
         return 'Gaps: ' + str(sorted(self.gaps, key=lambda x: x[0])) + ', ' + 'Segments: ' + str(sorted(self.segments, key=lambda x: x[1]))
 
-this = LinePacker(1000.0)
-this.pack(100.0, 700.0)
-this.pack(100.0, 645.0)
-this.pack(300.0, 300.0)
-this.pack(5.0, 725.0)
-this.pack(50.0, 0.0)
-this.pack(75.0, 0.0)
-print this.pack(125.0, 500.0)
-print str(this)
+
 
