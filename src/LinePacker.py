@@ -19,7 +19,8 @@ class LinePacker(object):
         else:
             return any((gap[1] - gap[0]) >= width for gap in self.gaps)
 
-    def gap_dist(self, poss_gaps, near):
+    @staticmethod
+    def gap_dist(poss_gaps, near):
         gap_dist = []
         for poss_gap in poss_gaps:
             if abs(poss_gap[0] - near) > abs(poss_gap[1] - near):
