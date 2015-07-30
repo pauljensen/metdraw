@@ -19,76 +19,75 @@ class LinePacker(object):
         else:
             return any((gap[1] - gap[0]) >= width for gap in self.gaps)
 
-    @staticmethod
-    def gap_dist(poss_gaps, near):
-        gap_dist = []
-        for poss_gap in poss_gaps:
-            if abs(poss_gap[0] - near) > abs(poss_gap[1] - near):
-                gap_dist.append(poss_gap + (abs(poss_gap[1] - near),))
-            else:
-                gap_dist.append(poss_gap + (abs(poss_gap[0] - near),))
-        return gap_dist
-
     def pack(self, width, near=0.0):
         # Determines the optimal position of a segment to be closest to a point.
         #   "width" and "near" are both floats in (0, length).
-        # Returns a 3-tuple with the segment start-point, endpoint, and the
+        # Returns a 2-tuple with the segment (start, end) and the
         #   distance from the segment center to "near".
         # Raises Unpackable if segment does not fit anywhere on line.
 
         if not self.canfit(width):
             raise Unpackable
 
-        half_width = width/2.0
-        poss_gaps = []
-        for gap in self.gaps:
-            if gap[1] - gap[0] >= width:
-                poss_gaps.append(gap)
-        for poss_gap in poss_gaps:
-            if poss_gap[0] <= near <= poss_gap[1]:
-                if ((near - half_width) >= poss_gap[0] and
-                        (near + half_width) <= poss_gap[1]):
-                    seg_start = near - half_width
-                    seg_end = near + half_width
-                    seg = (seg_start, seg_end)
+        half_width = width / 2.0
+
+        # mamimum distance that could be found
+        max_dist = max(abs(self.length - near), abs(near))
+
+        def place_in_gap(gap):
+            # Optimally place segment in a gap.
+            # Return a 3-tuple with the segment (start, end), the distance
+            #   between the segment midpoint and near, and the new gaps
+            #   created by placing the segment.  If the segment doesn't fit
+            #   in the gap, the first and third return values are None, and
+            #   the distance is 10*max_dist.
+            if gap[1] - gap[0] < width:
+                # segment doesn't fit; return enormous distance
+                return None, 10*max_dist, None
+
+            if gap[0] <= near <= gap[1]:
+                # near is in the segment
+                if near - gap[0] <= half_width:
+                    # too close to left end
+                    seg = (gap[0], gap[0]+width)
+                    new_gaps = [(seg[1], gap[1])]
+                elif gap[1] - near <= half_width:
+                    # too close to right end
+                    seg = (gap[1]-width, gap[1])
+                    new_gaps = [(gap[0], seg[0])]
                 else:
-                    if near - half_width < poss_gap[0]:
-                        len_move = poss_gap[0] - near + half_width
-                        seg = (near - half_width + len_move,
-                               near + half_width + len_move)
-                    elif near + half_width > poss_gap[1]:
-                        len_move = near + half_width - poss_gap[1]
-                        seg = (near - half_width - len_move,
-                               near + half_width - len_move)
-                self.segments.append(seg)
-                self.gaps.remove(poss_gap)
-                if not poss_gap[0] == seg[0]:
-                    left_gap = (poss_gap[0], seg[0])
-                    self.gaps.append(left_gap)
-                if not seg[1] == poss_gap[1]:
-                    right_gap = (seg[1], poss_gap[1])
-                    self.gaps.append(right_gap)
-                return seg + (abs(near-((seg[0] + seg[1]) /2.0)),)
+                    seg = (near-half_width, near+half_width)
+                    new_gaps = [(gap[0], seg[0]), (seg[1], gap[1])]
+            elif near < gap[0]:
+                # near is to the left
+                seg = (gap[0], gap[0]+width)
+                new_gaps = [(seg[1], gap[1])]
             else:
-                new_poss_gaps = sorted(self.gap_dist(poss_gaps, near),
-                                       key=lambda x: x[2])
-                best_gap = new_poss_gaps[0][0:2]
-                if abs(near - best_gap[0]) > abs(near - best_gap[1]):
-                    seg = (best_gap[1] - width, best_gap[1])
-                else:
-                    seg = (best_gap[0], best_gap[0] + width)
-                self.segments.append(seg)
-                self.gaps.remove(best_gap)
-                if not best_gap[0] == seg[0]:
-                    left_gap = (best_gap[0], seg[0])
-                    self.gaps.append(left_gap)
-                if not seg[1] == best_gap[1]:
-                    right_gap = (seg[1], best_gap[1])
-                    self.gaps.append(right_gap)
-                return seg + (abs(near-((seg[0] + seg[1]) / 2.0)),)
+                # near is to the right
+                seg = (gap[1]-width, gap[1])
+                new_gaps = [(gap[0], seg[0])]
+
+            dist = abs(sum(seg)/2.0 - near)
+            return seg, dist, new_gaps
+
+        placed = map(place_in_gap, self.gaps)
+        arg_best_fit = min(enumerate(placed), key=lambda x: x[1][1])[0]
+        del self.gaps[arg_best_fit]
+        segment, distance, gaps = placed[arg_best_fit]
+        self.gaps += gaps
+        self.segments.append(segment)
+        return segment, distance
   
     def __str__(self):
         return ('Gaps: ' + str(sorted(self.gaps, key=lambda x: x[0])) + ', ' +
                 'Segments: ' + str(sorted(self.segments, key=lambda x: x[1])))
 
 
+if __name__ == "__main__":
+    lp = LinePacker(100)
+    lp.pack(10, 50)
+    print str(lp)
+    lp.pack(10, 50)
+    print str(lp)
+    lp.pack(10, 50)
+    print str(lp)
