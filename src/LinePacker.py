@@ -7,9 +7,9 @@ class LinePacker(object):
     def __init__(self, length):
         # creates an object that packs segments into a line of a given length
         self.length = length
-        self.segments = []
-        self.gaps = []
-        self.gaps.append((0.0,length))
+        self._segments = []
+        self._gaps = []
+        self._gaps.append((0.0,length))
 
     def canfit(self, width):
         # determines if a segment of width will fit into the line (given all
@@ -17,7 +17,7 @@ class LinePacker(object):
         if width > self.length:
             return False
         else:
-            return any((gap[1] - gap[0]) >= width for gap in self.gaps)
+            return any((gap[1] - gap[0]) >= width for gap in self._gaps)
 
     def pack(self, width, near=0.0):
         # Determines the optimal position of a segment to be closest to a point.
@@ -70,17 +70,17 @@ class LinePacker(object):
             dist = abs(sum(seg)/2.0 - near)
             return seg, dist, new_gaps
 
-        placed = map(place_in_gap, self.gaps)
+        placed = map(place_in_gap, self._gaps)
         arg_best_fit = min(enumerate(placed), key=lambda x: x[1][1])[0]
-        del self.gaps[arg_best_fit]
+        del self._gaps[arg_best_fit]
         segment, distance, gaps = placed[arg_best_fit]
-        self.gaps += gaps
-        self.segments.append(segment)
+        self._gaps += gaps
+        self._segments.append(segment)
         return segment, distance
   
     def __str__(self):
-        return ('Gaps: ' + str(sorted(self.gaps, key=lambda x: x[0])) + ', ' +
-                'Segments: ' + str(sorted(self.segments, key=lambda x: x[1])))
+        return ('Gaps: ' + str(sorted(self._gaps, key=lambda x: x[0])) + ', ' +
+                'Segments: ' + str(sorted(self._segments, key=lambda x: x[1])))
 
 
 if __name__ == "__main__":

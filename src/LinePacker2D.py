@@ -1,11 +1,7 @@
 __author__ = 'william'
 
-from path import *
-from LinePacker import *
-
-
-class Unpackable(Exception):
-    pass
+from svg.path import Line
+from LinePacker import LinePacker, Unpackable
 
 
 class LinePacker2D(object):
@@ -18,24 +14,19 @@ class LinePacker2D(object):
         self.x2 = point2.real
         self.y2 = point2.imag
         self.t_line = LinePacker(1.0)
-        self.segments = []
-        self.gaps = []
         self.orig_line = Line(point1, point2)
         self.length = self.orig_line.length()
-        self.gaps.append(self.orig_line)
 
     def canfit(self, line_len):
-        if line_len > self.length:
-            return False
-        else:
-            return any((gap.length() >= line_len for gap in self.gaps))
+        return self.t_line.canfit(line_len/self.length)
 
     def get_t(self, point):
         a = point.real
         b = point.imag
         dx = self.x2 - self.x1
         dy = self.y2 - self.y1
-        t = ((dx * (a - self.x1)) + (dy * (b - self.y1))) / ((dx**2) + (dy**2))
+        t = ((dx * (a - self.x1)) + (dy * (b - self.y1))) / \
+            ((dx**2) + (dy**2))
         if t > 1.0:
             return 1.0
         elif t < 0.0:
@@ -43,39 +34,44 @@ class LinePacker2D(object):
         else:
             return t
 
-    def bad_gaps(self, tgaps):
-        self.gaps = []
-        for gap in tgaps:
-            first = gap[0]
-            sec = gap[1]
-            pt1 = self.orig_line.point(first)
-            pt2 = self.orig_line.point(sec)
-            line = Line(pt1, pt2)
-            self.gaps.append(line)
-        return self.gaps
+    def get_gaps(self):
+        gap_list = []
+        for gap in self.t_line._gaps:
+            gap_list.append(Line(self.orig_line.point(gap[0]),
+                                 self.orig_line.point(gap[1])))
+        return gap_list
 
-    def pack(self, line_len, near):
+    def get_segments(self):
+        seg_list = []
+        for seg in self.t_line._segments:
+            seg_list.append(Line(self.orig_line.point(seg[0]),
+                                 self.orig_line.point(seg[1])))
+        return seg_list
+
+    def pack(self, line_len, near=0+0j):
         if not self.canfit(line_len):
             raise Unpackable
-        else:
-            width = line_len / self.length
-            t = self.get_t(near)
-            ts = self.t_line.pack(width, t)[0]
-            pt1 = self.orig_line.point(ts[0])
-            pt2 = self.orig_line.point(ts[1])
-            new_seg = Line(pt1, pt2)
-            self.segments.append(new_seg)
-            self.bad_gaps(self.t_line.gaps)
-            return new_seg
+        width = line_len / self.length
+        t = self.get_t(near)
+        ts = self.t_line.pack(width, t)
+        pt1 = self.orig_line.point(ts[0][0])
+        pt2 = self.orig_line.point(ts[0][1])
+        new_seg = Line(pt1, pt2)
+        dist = ts[1] * self.length
+        return new_seg, dist
 
     def __str__(self):
-        return "Gaps: " + str(self.gaps) + ',' + "Segments: " + str(self.segments)
+        return "Gaps: " + str(self.get_gaps()) + ', ' + \
+               "Segments: " + str(self.get_segments())
 
-line = LinePacker2D(100+10j, 150+25j)
-print line.gaps
-print line.pack(10.0, 115.0+10j)
-print line.pack(2.0, 125+17.5j)
-print line
+if __name__ == "__main__":
+    lp2D = LinePacker2D(100+10j, 150+25j)
+    lp2D.pack(10.0, 100+10j)
+    print lp2D
+    lp2D.pack(2.0, 100+10j)
+    print lp2D
+    lp2D.pack(40)
+    print lp2D
 
 
 
