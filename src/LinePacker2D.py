@@ -1,4 +1,4 @@
-__author__ = 'william'
+
 
 from svg.path import Line
 from LinePacker import LinePacker, Unpackable
