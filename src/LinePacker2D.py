@@ -68,9 +68,9 @@ if __name__ == "__main__":
     lp2D = LinePacker2D(100+10j, 150+25j)
     lp2D.pack(10.0, 100+10j)
     print lp2D
-    lp2D.pack(2.0, 100+10j)
+    lp2D.pack(15.0, 100+10j)
     print lp2D
-    lp2D.pack(40)
+    lp2D.pack(25.0)
     print lp2D
 
 
