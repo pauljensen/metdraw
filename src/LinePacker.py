@@ -19,7 +19,7 @@ class LinePacker(object):
         else:
             return any((gap[1] - gap[0]) >= width for gap in self._gaps)
 
-    def pack(self, width, near=0.0):
+    def pack(self, width, near=0.0, check=False):
         # Determines the optimal position of a segment to be closest to a point.
         #   "width" and "near" are both floats in (0, length).
         # Returns a 2-tuple with the segment (start, end) and the
@@ -69,14 +69,16 @@ class LinePacker(object):
 
             dist = abs(sum(seg)/2.0 - near)
             return seg, dist, new_gaps
-
         placed = map(place_in_gap, self._gaps)
         arg_best_fit = min(enumerate(placed), key=lambda x: x[1][1])[0]
-        del self._gaps[arg_best_fit]
-        segment, distance, gaps = placed[arg_best_fit]
-        self._gaps += gaps
-        self._segments.append(segment)
-        return segment, distance
+        if check:
+            return placed[arg_best_fit][0:2]
+        else:
+            del self._gaps[arg_best_fit]
+            segment, distance, gaps = placed[arg_best_fit]
+            self._gaps += gaps
+            self._segments.append(segment)
+            return segment, distance
   
     def __str__(self):
         return ('Gaps: ' + str(sorted(self._gaps, key=lambda x: x[0])) + ', ' +
@@ -85,7 +87,7 @@ class LinePacker(object):
 
 if __name__ == "__main__":
     lp = LinePacker(100)
-    lp.pack(10, 50)
+    print lp.pack(10, 50, check=True)
     print str(lp)
     lp.pack(10, 50)
     print str(lp)
