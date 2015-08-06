@@ -1,5 +1,6 @@
 
 import os, platform, subprocess
+from distutils.version import LooseVersion
 
 has_error = [False]
 
@@ -27,8 +28,8 @@ def test_metdraw():
     print ""
     print "Python information:"
     print "   Version:", platform.python_version()
-    major,minor,patch = [int(x) for x in platform.python_version_tuple()]
-    if not (major == 2 and minor >= 7):
+    version = LooseVersion(platform.python_version())
+    if version < LooseVersion("2.7"):
         make_error("Python 2.7 is required.")
 
     print ""
