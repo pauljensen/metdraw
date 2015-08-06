@@ -1,7 +1,7 @@
 
 
 from svg.path import Line
-from LinePacker import LinePacker, Unpackable
+from LinePacker import LinePacker
 
 
 class LinePacker2D(object):
@@ -49,15 +49,13 @@ class LinePacker2D(object):
         return seg_list
 
     def pack(self, line_len, near=0+0j):
-        if not self.canfit(line_len):
-            raise Unpackable
         width = line_len / self.length
         t = self.get_t(near)
         ts = self.t_line.pack(width, t)
         pt1 = self.orig_line.point(ts[0][0])
         pt2 = self.orig_line.point(ts[0][1])
         new_seg = Line(pt1, pt2)
-        dist = ts[1] * self.length
+        dist = Line(new_seg.point(.5), near).length()
         return new_seg, dist
 
     def __str__(self):
@@ -70,7 +68,7 @@ if __name__ == "__main__":
     print lp2D
     lp2D.pack(15.0, 100+10j)
     print lp2D
-    lp2D.pack(25.0)
+    lp2D.pack(25.0, 150+25j)
     print lp2D
 
 
