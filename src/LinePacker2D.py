@@ -48,10 +48,10 @@ class LinePacker2D(object):
                                  self.orig_line.point(seg[1])))
         return seg_list
 
-    def pack(self, line_len, near=0+0j):
+    def pack(self, line_len, near=0+0j, check=False):
         width = line_len / self.length
         t = self.get_t(near)
-        ts = self.t_line.pack(width, t)
+        ts = self.t_line.pack(width, t, check=check)
         pt1 = self.orig_line.point(ts[0][0])
         pt2 = self.orig_line.point(ts[0][1])
         new_seg = Line(pt1, pt2)
