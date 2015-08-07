@@ -9,7 +9,7 @@ class LinePacker(object):
         self.length = length
         self._segments = []
         self._gaps = []
-        self._gaps.append((0.0,length))
+        self._gaps.append((0.0, length))
 
     # read-only accessors for protected properties
     def get_gaps(self):

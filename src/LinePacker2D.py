@@ -59,8 +59,8 @@ class LinePacker2D(object):
         return new_seg, dist
 
     def __str__(self):
-        return "Gaps: " + str(self.get_gaps()) + ', ' + \
-               "Segments: " + str(self.get_segments())
+        return ("Gaps: " + str(self.get_gaps()) + ', ' +
+                "Segments: " + str(self.get_segments()))
 
 if __name__ == "__main__":
     lp2D = LinePacker2D(100+10j, 150+25j)
