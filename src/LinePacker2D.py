@@ -36,14 +36,14 @@ class LinePacker2D(object):
 
     def get_gaps(self):
         gap_list = []
-        for gap in self.t_line._gaps:
+        for gap in self.t_line.get_gaps():
             gap_list.append(Line(self.orig_line.point(gap[0]),
                                  self.orig_line.point(gap[1])))
         return gap_list
 
     def get_segments(self):
         seg_list = []
-        for seg in self.t_line._segments:
+        for seg in self.t_line.get_segments():
             seg_list.append(Line(self.orig_line.point(seg[0]),
                                  self.orig_line.point(seg[1])))
         return seg_list

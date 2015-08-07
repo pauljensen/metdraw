@@ -11,6 +11,13 @@ class LinePacker(object):
         self._gaps = []
         self._gaps.append((0.0,length))
 
+    # read-only accessors for protected properties
+    def get_gaps(self):
+        return self._gaps
+
+    def get_segments(self):
+        return self._segments
+
     def canfit(self, width):
         # determines if a segment of width will fit into the line (given all
         # previously placed segments)
