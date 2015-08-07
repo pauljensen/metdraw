@@ -7,6 +7,8 @@ from LinePacker import LinePacker
 class LinePacker2D(object):
 
     def __init__(self, point1, point2):
+        # creates an object that packs segments
+        #   into a 2D-line between two points
         self.point1 = point1
         self.point2 = point2
         self.x1 = point1.real
@@ -18,9 +20,12 @@ class LinePacker2D(object):
         self.length = self.orig_line.length()
 
     def canfit(self, line_len):
+        # determines if a segment of a given length can fit
+        #   given previously placed segments
         return self.t_line.canfit(line_len/self.length)
 
     def get_t(self, point):
+        # convert a point from x,y to its nearest position on the unit line
         a = point.real
         b = point.imag
         dx = self.x2 - self.x1
@@ -34,6 +39,7 @@ class LinePacker2D(object):
         else:
             return t
 
+    # return the list of gaps/segments
     def get_gaps(self):
         gap_list = []
         for gap in self.t_line.get_gaps():
@@ -49,12 +55,21 @@ class LinePacker2D(object):
         return seg_list
 
     def pack(self, line_len, near=0+0j, check=False):
+        #Packs a segment of a given length closest to a point on a 2D line.
+        #   Returns a 2-tuple with the new segment's start and end points and
+        #   the distance from "near" to the midpoint.
+
+        # corresponding width on unit line
         width = line_len / self.length
         t = self.get_t(near)
         ts = self.t_line.pack(width, t, check=check)
+        # Use unit line points (start,end) to find the corresponding
+        #   points on the 2D-line, then generate the Line segment to pack
         pt1 = self.orig_line.point(ts[0][0])
         pt2 = self.orig_line.point(ts[0][1])
         new_seg = Line(pt1, pt2)
+        # Generate a new line segment from the midpoint of the packed
+        #   segment to "near", calculate the length to find the distance
         dist = Line(new_seg.point(.5), near).length()
         return new_seg, dist
 

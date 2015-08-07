@@ -32,6 +32,8 @@ class LinePacker(object):
         # Returns a 2-tuple with the segment (start, end) and the
         #   distance from the segment center to "near".
         # Raises Unpackable if segment does not fit anywhere on line.
+        # If check=True it will find the best place for the
+        #   segment but not actually pack it
 
         if not self.canfit(width):
             raise Unpackable

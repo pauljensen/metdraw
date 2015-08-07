@@ -6,6 +6,7 @@ from LinePacker2D import LinePacker2D
 
 class PolyPacker(object):
     def __init__(self, points):
+        #creates multiple LinePacker2D objects from the list of points
         self.points = points
         self.n_points = len(points)
         self.lines = []
@@ -14,7 +15,8 @@ class PolyPacker(object):
                                            self.points[i+1]))
         self.lines.append(LinePacker2D(self.points[self.n_points-1],
                                        self.points[0]))
-
+    #Determines if a segment of a given length can fit
+    #   in any of the sides of the polygon
     def canfit(self, line_len):
         return any(lp2D.canfit(line_len) for lp2D in self.lines)
 
@@ -24,13 +26,16 @@ class PolyPacker(object):
         dists = []
         for i, lp2D in enumerate(self.lines):
             try:
+                # see if the segment is packable
                 pack = lp2D.pack(line_len, near, check=True)
             except Unpackable:
                 pass
             else:
+                # Add segment,dist to list of possible sides
+                #   with corresponding index
                 dists.append((pack[1], i))
+        # the index in the self.lines list that has the minimum distance 
         min_index = sorted(dists, key=lambda x: x[0])[0][1]
-        # the index in the self.lines list that has the desired LP2D object
         line, dist = self.lines[min_index].pack(line_len, near)
         return line, dist
 
