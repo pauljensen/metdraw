@@ -200,7 +200,7 @@ class PolyPacker(object):
         # the index in the self.lines list that has the minimum distance
         min_index = sorted(dists, key=lambda x: x[0])[0][1]
         line, dist = self.lines[min_index].pack(line_len, near)
-        return line, dist
+        return line, dist, min_index
 
     def __str__(self):
         pack_str = ""
@@ -209,3 +209,7 @@ class PolyPacker(object):
                         "to %s: " % str(line.orig_line.point(1.0)))
             pack_str = pack_str + skeleton + str(line) + "| "
         return pack_str
+
+pp = PolyPacker([0+0j, 0+10j, 10+10j, 10+0j])
+
+print pp.pack(5.0)
