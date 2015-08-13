@@ -3,6 +3,8 @@ from xml.etree.ElementTree import *
 from svg.path import Line, parse_path, Path
 from packing import PolyPacker
 from exchange_layout import gen_graph
+from rxns import *
+
 
 def tagmatch(elem,tag):
     return elem.tag.endswith('}' + tag)
@@ -20,6 +22,10 @@ tag = 'ns0:'
 #create a point
 def gen_point(x, y):
     return x + y * 1j
+
+def remove_pt(numb):
+    new_numb = numb.replace("pt", '')
+    return float(new_numb)
 
 #finds the size of the reaction from the halfway point of the midpoint segment
 #  to the major/minor product arrows (currently not in use)
@@ -154,6 +160,12 @@ for g in boxList:
 
 #create PolyPacker object
 pp = PolyPacker(newBoxPts)
+line_len = Line(newBoxPts[0], boxPoints[0]).length()
+pp.pack(line_len, near=newBoxPts[0])
+pp.pack(line_len, near=newBoxPts[1])
+pp.pack(line_len, near=newBoxPts[2])
+pp.pack(line_len, near=newBoxPts[3])
+
 
 #useful numbers when it comes to transforming
 # the reactions to the correct place
@@ -169,8 +181,9 @@ for rxn in rxnList:
     graphDot.export_graphviz(output="svg", filename="dotprac2")
     file1 = open("dotprac2.svg", "r")
     tree = ElementTree(file=file1)
-
-    graph1 = tree.getroot()[0]
+    graph_root = tree.getroot()
+    graph1 = graph_root[0]
+    width = remove_pt(findfirst(tree, 'svg').get('width'))
     glist = findall(graph1, 'g')
     nodeList = get_nodes(glist)
     edgeList = get_edges(glist)
@@ -205,7 +218,7 @@ for rxn in rxnList:
         near = metabDict[name]
     else:
         near = gen_point(bottomLine.point(.5).real, leftLine.point(.5).imag)
-    pack = pp.pack(path_x * 2.0 + 15.0, near=near)
+    pack = pp.pack(width + 5.0, near=near)
     pack_mp = pack[0].point(.5)
     if pack[2] == 3:
         rotateTop = "rotate(%f %f %f) " % (0, memBoxStart_x, memBoxStart_y)
