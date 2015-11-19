@@ -1,9 +1,318 @@
-
+from ex2 import reaction_to_dott
 import copy
 
 from graphviz import AttrStmt,Node,Edge,Graph
 from model import Model
 import minors
+
+def reaction_to_dot_new(rxn):
+    INVISIBLE_NODE_ATTRS = rxn.get_param('INVISIBLE_NODE_ATTRS')
+    EDGE_ATTRS = rxn.get_param('EDGE_ATTRS')
+    MET_ATTRS = rxn.get_param('MET_ATTRS')
+    COMPACT = rxn.get_param('COMPACT')
+    SHOW_MINORS = rxn.get_param('SHOW_MINORS')
+    MAX_MINORS = rxn.get_param('MAX_MINORS')
+    MINOR_MET_ATTRS = rxn.get_param('MINOR_MET_ATTRS')
+
+    METABOLITE_LABEL_TRANSFORM = rxn.get_param('METABOLITE_LABEL_TRANSFORM')
+
+    REACTION_LABEL_TRANSFORM = rxn.get_param('REACTION_LABEL_TRANSFORM')
+    label_id = REACTION_LABEL_TRANSFORM(rxn.id)
+
+    statements = []
+    statements.append(AttrStmt('edge',**EDGE_ATTRS))
+    statements.append(AttrStmt('node',**MET_ATTRS))
+
+    n_major_react = len(rxn.major_reactants)
+    n_major_prod = len(rxn.major_products)
+    n_minor_react = len(rxn.minor_reactants)
+    n_minor_prod = len(rxn.minor_products)
+
+    react_dir = "back" if rxn.reversible else "none"
+
+    def edge_id():
+        curr = 0
+        while True:
+            yield "$" + rxn.id + "::" + str(curr)
+            curr += 1
+    rids = edge_id()
+
+    render_minors = SHOW_MINORS and n_minor_react + n_minor_prod > 0
+    if render_minors:
+        if (len(rxn.minor_reactants) > MAX_MINORS
+                or len(rxn.minor_products) > MAX_MINORS):
+            # prevent this change from effecting the original rxn
+            rxn = copy.deepcopy(rxn)
+            rxn.consolidate_minors(MAX_MINORS)
+
+        if COMPACT:
+            rmnode = pmnode = "mnode::" + rxn.id
+            statements.append(Node(rmnode,**INVISIBLE_NODE_ATTRS))
+        else:
+            rmnode = "rmnode::" + rxn.id
+            pmnode = "pmnode::" + rxn.id
+            statements.append(Node(rmnode,**INVISIBLE_NODE_ATTRS))
+            statements.append(Node(pmnode,**INVISIBLE_NODE_ATTRS))
+
+        def minor_id(s):
+            return s + "::" + rxn.id
+
+    if n_major_react == 0 and n_minor_react == 0:
+        reactants = ["r_dummy::"+rxn.id]
+        statements.append(Node(reactants[0],**INVISIBLE_NODE_ATTRS))
+    else:
+        reactants = [x.id for x in rxn.major_reactants]
+        for r in rxn.major_reactants:
+            met_label = METABOLITE_LABEL_TRANSFORM(r.label_id)
+            statements.append(Node(r.id,label=met_label))
+    if n_major_prod == 0 and n_minor_prod == 0:
+        products = ["p_dummy::"+rxn.id]
+        statements.append(Node(products[0],**INVISIBLE_NODE_ATTRS))
+    else:
+        products = [x.id for x in rxn.major_products]
+        for p in rxn.major_products:
+            met_label = METABOLITE_LABEL_TRANSFORM(p.label_id)
+            statements.append(Node(p.id,label=met_label))
+
+    rnode = "rnode::" + rxn.id
+    pnode = "pnode::" + rxn.id
+
+    if len(rxn.major_reactants) == 0:
+        if len(rxn.minor_reactants) == 0:
+            if len(rxn.minor_products) == 0:
+                if len(rxn.major_products) == 0:
+                    statements.append(Node(rnode, **INVISIBLE_NODE_ATTRS))
+                    statements.append(Node(pnode, **INVISIBLE_NODE_ATTRS))
+                    statements.append(Edge(pnode,rnode, dir="forward", id=rids.next()))
+                else:
+                    statements.append(Node(rnode, **INVISIBLE_NODE_ATTRS))
+                    statements.append(Node(pnode, **INVISIBLE_NODE_ATTRS))
+                    statements.append(Edge(rnode,pnode,dir="none",id=rids.next(),
+                                           label=label_id))
+                    for p in rxn.major_products:
+                        statements.append(Edge(pnode,p.id,dir="forward",id=rids.next()))
+            elif len(rxn.major_products) == 0:
+                statements.append(Node(rnode, **INVISIBLE_NODE_ATTRS))
+                statements.append(Node(pmnode, **INVISIBLE_NODE_ATTRS))
+                statements.append(Edge(rnode,pmnode,dir="none",id=rids.next(),
+                                           label=label_id))
+                for p in rxn.minor_products:
+                    met_label = METABOLITE_LABEL_TRANSFORM(p.label_id)
+                    statements.append(Node(minor_id(p.id),label=met_label,
+                                                   **MINOR_MET_ATTRS))
+                    statements.append(Edge(pmnode,minor_id(p.id),
+                                   dir="forward",id=rids.next()))
+            else:
+                statements.append(Node(rnode, **INVISIBLE_NODE_ATTRS))
+                statements.append(Node(pmnode, **INVISIBLE_NODE_ATTRS))
+                statements.append(Node(pnode, **INVISIBLE_NODE_ATTRS))
+                statements.append(Edge(rnode,pmnode,dir="none",id=rids.next()))
+                statements.append(Edge(pmnode,pnode,dir="none",id=rids.next(),
+                                           label=label_id))
+                for p in rxn.major_products:
+                    statements.append(Edge(pnode,p.id,dir="forward",id=rids.next()))
+                for p in rxn.minor_products:
+                    met_label = METABOLITE_LABEL_TRANSFORM(p.label_id)
+                    statements.append(Node(minor_id(p.id),label=met_label,
+                                                   **MINOR_MET_ATTRS))
+                    statements.append(Edge(pmnode,minor_id(p.id),
+                                   dir="forward",id=rids.next()))
+        elif len(rxn.minor_products) == 0:
+            if len(rxn.major_products) == 0:
+                statements.append(Node(rmnode, **INVISIBLE_NODE_ATTRS))
+                statements.append(Node(pnode, **INVISIBLE_NODE_ATTRS))
+                statements.append(Edge(rmnode,pnode,dir="forward",id=rids.next(),
+                                           label=label_id))
+                for r in rxn.minor_reactants:
+                    met_label = METABOLITE_LABEL_TRANSFORM(r.label_id)
+                    statements.append(Node(minor_id(r.id),label=met_label,
+                                                  **MINOR_MET_ATTRS))
+                    statements.append(Edge(minor_id(r.id),rmnode,
+                                   dir=react_dir,id=rids.next()))
+            else:
+                statements.append(Node(rmnode, **INVISIBLE_NODE_ATTRS))
+                statements.append(Node(pnode, **INVISIBLE_NODE_ATTRS))
+                for p in rxn.major_products:
+                    statements.append(Edge(pnode,p.id,dir="forward",id=rids.next()))
+                statements.append(Edge(rmnode,pnode,dir="none",id=rids.next(),
+                                           label=label_id))
+                for r in rxn.minor_reactants:
+                    met_label = METABOLITE_LABEL_TRANSFORM(r.label_id)
+                    statements.append(Node(minor_id(r.id),label=met_label,
+                                                  **MINOR_MET_ATTRS))
+                    statements.append(Edge(minor_id(r.id),rmnode,
+                                   dir=react_dir,id=rids.next()))
+        else:
+            if len(rxn.major_products) == 0:
+                statements.append(Node(rmnode, **INVISIBLE_NODE_ATTRS))
+                statements.append(Node(pmnode, **INVISIBLE_NODE_ATTRS))
+                statements.append(Edge(rmnode,pmnode,dir="none",id=rids.next(),
+                                           label=label_id))
+                for p in rxn.minor_products:
+                        met_label = METABOLITE_LABEL_TRANSFORM(p.label_id)
+                        statements.append(Node(minor_id(p.id),label=met_label,
+                                                       **MINOR_MET_ATTRS))
+                        statements.append(Edge(pmnode,minor_id(p.id),
+                                       dir="forward",id=rids.next()))
+                for r in rxn.minor_reactants:
+                        met_label = METABOLITE_LABEL_TRANSFORM(r.label_id)
+                        statements.append(Node(minor_id(r.id),label=met_label,
+                                                      **MINOR_MET_ATTRS))
+                        statements.append(Edge(minor_id(r.id),rmnode,
+                                       dir=react_dir,id=rids.next()))
+            else:
+                statements.append(Node(rmnode, **INVISIBLE_NODE_ATTRS))
+                statements.append(Node(pmnode, **INVISIBLE_NODE_ATTRS))
+                statements.append(Node(pnode, **INVISIBLE_NODE_ATTRS))
+                statements.append(Edge(rmnode,pmnode,dir="none",id=rids.next()))
+                statements.append(Edge(pmnode,pnode,dir="none",id=rids.next(),
+                                           label=label_id))
+                for p in rxn.major_products:
+                    statements.append(Edge(pnode,p.id,dir="forward",id=rids.next()))
+                for p in rxn.minor_products:
+                    met_label = METABOLITE_LABEL_TRANSFORM(p.label_id)
+                    statements.append(Node(minor_id(p.id),label=met_label,
+                                                   **MINOR_MET_ATTRS))
+                    statements.append(Edge(pmnode,minor_id(p.id),
+                                   dir="forward",id=rids.next()))
+                for r in rxn.minor_reactants:
+                    met_label = METABOLITE_LABEL_TRANSFORM(r.label_id)
+                    statements.append(Node(minor_id(r.id),label=met_label,
+                                                  **MINOR_MET_ATTRS))
+                    statements.append(Edge(minor_id(r.id),rmnode,
+                                   dir=react_dir,id=rids.next()))
+    else:
+        if len(rxn.minor_reactants) == 0:
+            if len(rxn.minor_products) == 0:
+                if len(rxn.major_products) == 0:
+                    statements.append(Node(rnode, **INVISIBLE_NODE_ATTRS))
+                    statements.append(Node(pnode, **INVISIBLE_NODE_ATTRS))
+                    statements.append(Edge(rnode,pnode,dir="forward",id=rids.next(),
+                                           label=label_id))
+                    for r in rxn.major_reactants:
+                        statements.append(Edge(r.id,rnode,dir=react_dir,id=rids.next()))
+                else:
+                    statements.append(Node(rnode, **INVISIBLE_NODE_ATTRS))
+                    statements.append(Node(pnode, **INVISIBLE_NODE_ATTRS))
+                    statements.append(Edge(rnode,pnode,dir="none",id=rids.next(),
+                                           label=label_id))
+                    for r in rxn.major_reactants:
+                        statements.append(Edge(r.id,rnode,dir=react_dir,id=rids.next()))
+                    for p in rxn.major_products:
+                        statements.append(Edge(pnode,p.id,dir="forward",id=rids.next()))
+            elif len(rxn.major_products) == 0:
+                statements.append(Node(rnode, **INVISIBLE_NODE_ATTRS))
+                statements.append(Node(pmnode, **INVISIBLE_NODE_ATTRS))
+                statements.append(Edge(rnode,pmnode,dir="none",id=rids.next(),
+                                           label=label_id))
+                for r in rxn.major_reactants:
+                    statements.append(Edge(r.id,rnode,dir=react_dir,id=rids.next()))
+                for p in rxn.minor_products:
+                    met_label = METABOLITE_LABEL_TRANSFORM(p.label_id)
+                    statements.append(Node(minor_id(p.id),label=met_label,
+                                                   **MINOR_MET_ATTRS))
+                    statements.append(Edge(pmnode,minor_id(p.id),
+                                   dir="forward",id=rids.next()))
+            else:
+                statements.append(Node(rnode, **INVISIBLE_NODE_ATTRS))
+                statements.append(Node(pmnode, **INVISIBLE_NODE_ATTRS))
+                statements.append(Node(pnode, **INVISIBLE_NODE_ATTRS))
+                statements.append(Edge(rnode,pmnode,dir="none",id=rids.next()))
+                statements.append(Edge(pmnode,pnode,dir="none",id=rids.next(),
+                                           label=label_id))
+                for r in rxn.major_reactants:
+                    statements.append(Edge(r.id,rnode,dir=react_dir,id=rids.next()))
+                for p in rxn.major_products:
+                    statements.append(Edge(pnode,p.id,dir="forward",id=rids.next()))
+                for p in rxn.minor_products:
+                    met_label = METABOLITE_LABEL_TRANSFORM(p.label_id)
+                    statements.append(Node(minor_id(p.id),label=met_label,
+                                                   **MINOR_MET_ATTRS))
+                    statements.append(Edge(pmnode,minor_id(p.id),
+                                   dir="forward",id=rids.next()))
+        elif len(rxn.minor_products) == 0:
+            if len(rxn.major_products) == 0:
+                statements.append(Node(rnode, **INVISIBLE_NODE_ATTRS))
+                statements.append(Node(rmnode, **INVISIBLE_NODE_ATTRS))
+                statements.append(Node(pmnode, **INVISIBLE_NODE_ATTRS))
+                statements.append(Edge(rnode,rmnode,dir="none",id=rids.next()))
+                statements.append(Edge(rmnode,pmnode,dir="forward",id=rids.next(),
+                                           label=label_id))
+                for r in rxn.major_reactants:
+                    statements.append(Edge(r.id,rnode,dir=react_dir,id=rids.next()))
+                for r in rxn.minor_reactants:
+                    met_label = METABOLITE_LABEL_TRANSFORM(r.label_id)
+                    statements.append(Node(minor_id(r.id),label=met_label,
+                                                  **MINOR_MET_ATTRS))
+                    statements.append(Edge(minor_id(r.id),rmnode,
+                                   dir=react_dir,id=rids.next()))
+            else:
+                statements.append(Node(rnode, **INVISIBLE_NODE_ATTRS))
+                statements.append(Node(rmnode, **INVISIBLE_NODE_ATTRS))
+                statements.append(Node(pnode, **INVISIBLE_NODE_ATTRS))
+                statements.append(Edge(rnode,rmnode,dir="none",id=rids.next()))
+                statements.append(Edge(rmnode,pnode,dir="none",id=rids.next(),
+                                           label=label_id))
+                for r in rxn.major_reactants:
+                    statements.append(Edge(r.id,rnode,dir=react_dir,id=rids.next()))
+                for p in rxn.major_products:
+                    statements.append(Edge(pnode,p.id,dir="forward",id=rids.next()))
+                for r in rxn.minor_reactants:
+                    met_label = METABOLITE_LABEL_TRANSFORM(r.label_id)
+                    statements.append(Node(minor_id(r.id),label=met_label,
+                                                  **MINOR_MET_ATTRS))
+                    statements.append(Edge(minor_id(r.id),rmnode,
+                                   dir=react_dir,id=rids.next()))
+        else:
+            if len(rxn.major_products) == 0:
+                statements.append(Node(rnode, **INVISIBLE_NODE_ATTRS))
+                statements.append(Node(rmnode, **INVISIBLE_NODE_ATTRS))
+                statements.append(Node(pmnode, **INVISIBLE_NODE_ATTRS))
+                statements.append(Edge(rnode,rmnode,dir="none",id=rids.next(),
+                                           label=label_id))
+                statements.append(Edge(rmnode,pmnode,dir="none",id=rids.next()))
+                for r in rxn.major_reactants:
+                    statements.append(Edge(r.id,rnode,dir=react_dir,id=rids.next()))
+                for p in rxn.minor_products:
+                    met_label = METABOLITE_LABEL_TRANSFORM(p.label_id)
+                    statements.append(Node(minor_id(p.id),label=met_label,
+                                                   **MINOR_MET_ATTRS))
+                    statements.append(Edge(pmnode,minor_id(p.id),
+                                   dir="forward",id=rids.next()))
+                for r in rxn.minor_reactants:
+                    met_label = METABOLITE_LABEL_TRANSFORM(r.label_id)
+                    statements.append(Node(minor_id(r.id),label=met_label,
+                                                  **MINOR_MET_ATTRS))
+                    statements.append(Edge(minor_id(r.id),rmnode,
+                                   dir=react_dir,id=rids.next()))
+            else:
+                statements.append(Node(rnode, **INVISIBLE_NODE_ATTRS))
+                statements.append(Node(rmnode, **INVISIBLE_NODE_ATTRS))
+                statements.append(Node(pmnode, **INVISIBLE_NODE_ATTRS))
+                statements.append(Node(pnode, **INVISIBLE_NODE_ATTRS))
+                statements.append(Edge(rnode,rmnode,dir="none",id=rids.next()))
+                statements.append(Edge(rmnode,pmnode,dir="none",id=rids.next(),
+                                           label=label_id))
+                statements.append(Edge(pmnode,pnode,dir="none",id=rids.next()))
+                for r in rxn.major_reactants:
+                    statements.append(Edge(r.id,rnode,dir=react_dir,id=rids.next()))
+                for p in rxn.major_products:
+                    statements.append(Edge(pnode,p.id,dir="forward",id=rids.next()))
+                for p in rxn.minor_products:
+                    met_label = METABOLITE_LABEL_TRANSFORM(p.label_id)
+                    statements.append(Node(minor_id(p.id),label=met_label,
+                                                   **MINOR_MET_ATTRS))
+                    statements.append(Edge(pmnode,minor_id(p.id),
+                                   dir="forward",id=rids.next()))
+                for r in rxn.minor_reactants:
+                    met_label = METABOLITE_LABEL_TRANSFORM(r.label_id)
+                    statements.append(Node(minor_id(r.id),label=met_label,
+                                                  **MINOR_MET_ATTRS))
+                    statements.append(Edge(minor_id(r.id),rmnode,
+                                   dir=react_dir,id=rids.next()))
+
+    return statements
+
 
 def reaction_to_dot(rxn):
     INVISIBLE_NODE_ATTRS = rxn.get_param('INVISIBLE_NODE_ATTRS')
@@ -95,11 +404,12 @@ def reaction_to_dot(rxn):
     
     rnode = "rnode::" + rxn.id
     pnode = "pnode::" + rxn.id
+
     if n_major_react > 0:
         statements.append(Node(rnode,**INVISIBLE_NODE_ATTRS))
     if n_major_prod > 0:
         statements.append(Node(pnode,**INVISIBLE_NODE_ATTRS))
-    
+
     for r in rxn.major_reactants:
         statements.append(Edge(r.id,rnode,dir=react_dir,id=rids.next()))
     for p in rxn.major_products:
@@ -303,7 +613,7 @@ def subsystem_to_dot(subsystem):
         style = subsystem.get_param('SUBSYSTEM_BORDER_STYLE')
         g.add(AttrStmt('graph',style=style))
     for rxn in subsystem.reactions:
-        g.add(reaction_to_dot(rxn))
+        g.add(reaction_to_dott(rxn))
     g.add(AttrStmt('graph',label=subsystem.name,
                    fontsize=subsystem.get_param('SUBSYSTEM_FONTSIZE')))
     if clone_links:
@@ -317,7 +627,7 @@ def exchange_to_dot(ex):
         sp.label_id = sp.id
         sp.minor = True
         
-    return reaction_to_dot(ex)
+    return reaction_to_dott(ex)
 
 def compartment_to_dot(compartment):
     g = Graph(name=compartment.id,cluster=True,subgraph=True)
