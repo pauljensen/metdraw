@@ -1,4 +1,4 @@
-from ex2 import reaction_to_dott
+
 import copy
 
 from graphviz import AttrStmt,Node,Edge,Graph
@@ -613,7 +613,7 @@ def subsystem_to_dot(subsystem):
         style = subsystem.get_param('SUBSYSTEM_BORDER_STYLE')
         g.add(AttrStmt('graph',style=style))
     for rxn in subsystem.reactions:
-        g.add(reaction_to_dott(rxn))
+        g.add(reaction_to_dot_new(rxn))
     g.add(AttrStmt('graph',label=subsystem.name,
                    fontsize=subsystem.get_param('SUBSYSTEM_FONTSIZE')))
     if clone_links:
@@ -627,7 +627,7 @@ def exchange_to_dot(ex):
         sp.label_id = sp.id
         sp.minor = True
         
-    return reaction_to_dott(ex)
+    return reaction_to_dot_new(ex)
 
 def compartment_to_dot(compartment):
     g = Graph(name=compartment.id,cluster=True,subgraph=True)
