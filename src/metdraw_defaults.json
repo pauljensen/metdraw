@@ -35,7 +35,7 @@
     },
     "MINOR_MET_ATTRS" : {
         "color" : "darkorange",
-        "sytle" : "filled",
+        "style" : "filled",
         "fillcolor" : "orange",
         "fontsize" : 10,
         "width" : 0.2,
