@@ -151,7 +151,7 @@ class Graph(object):
         f.write(self.to_string())
     
     def export_graphviz(self,engine="dot",output="dot",filename=None,
-                             clean=True,options=""):
+                             clean=True,options="",warnings=True):
         if filename is None:
             if self.name is None:
                 filename = "out.dot"
@@ -167,11 +167,15 @@ class Graph(object):
             sed_cmd = sed_cmd_str.format(filename)
             sed_error = os.system(sed_cmd)
         else:
-            dot_cmd_str = 'dot {0} -K{1} -T{2} -O "{3}"'
-            dot_cmd = dot_cmd_str.format(options,engine,output,filename)
+            if warnings:
+                dot_cmd_str = 'dot {0} -K{1} -T{2} -O "{3}"'
+                dot_cmd = dot_cmd_str.format(options,engine,output,filename)
+            else:
+                dot_cmd_str = 'dot {0} -K{1} -T{2} -O "{3}" -q'
+                dot_cmd = dot_cmd_str.format(options,engine,output,filename)
             dot_error = os.system(dot_cmd)
             sed_error = None
-        
+
         if dot_error or sed_error:
             print dot_error, sed_error
             
