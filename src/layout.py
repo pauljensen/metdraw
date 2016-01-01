@@ -651,15 +651,34 @@ def compartment_to_dot(compartment):
         gex.add(g)
         gex.add(AttrStmt('graph',style="dotted"))
         for ex in compartment.local_exchanges:
-            gex.add(exchange_to_dot(ex)) 
+            gex.add(exchange_to_dot(ex))
         return gex
     else:
         return g
 
+def compartment_to_dot2(compartment):
+    #SHOW_EXCHANGES = compartment.get_param('SHOW_EXCHANGES')
+    g = Graph(name=compartment.id,cluster=True,subgraph=True)
+    for subsystem in compartment.subsystems:
+        gsub = subsystem_to_dot(subsystem)
+        gsub.subgraph = True
+        gsub.tag('::'+subsystem.id)
+        g.add(gsub)
+    for comp in compartment.compartments:
+        gcomp = compartment_to_dot2(comp)
+        gcomp.subgraph = True
+        gcomp.tag('::'+comp.id)
+        g.add(gcomp)
+
+    label = AttrStmt('graph',label=compartment.name,
+                     fontsize=compartment.get_param('COMPARTMENT_FONTSIZE'))
+    g.add(label)
+    return g
+
 def model_to_dot(model):
     g = Graph(name=model.name)
     for comp in model.compartments:
-        gcomp = compartment_to_dot(comp)
+        gcomp = compartment_to_dot2(comp)
         gcomp.subgraph = True
         gcomp.tag('::'+comp.id)
         g.add(gcomp)
