@@ -295,7 +295,24 @@ class Model(Parameterized):
         print "Model",self.name
         for comp in self.compartments:
             comp.display(indent='   ')
-        
+
+def get_insides(compartments):
+    if compartments[0].compartments == []:
+        return [(compartments[0].id, None)]
+    else:
+        return [(compartments[0].id, compartments[0].compartments[0].id)] + get_insides(compartments[0].compartments)
+
+def get_comps(comps_list):
+    if comps_list[0].compartments == []:
+        return [(comps_list[0], comps_list[0].local_exchanges)]
+    else:
+        return [(comps_list[0], comps_list[0].local_exchanges)] + get_comps(comps_list[0].compartments)
+
+def get_exchanges(model):
+    exs_dct = {}
+    for comp in get_comps(model.compartments):
+        exs_dct[comp[0].id] = comp[1]
+    return exs_dct
 
 def nest_compartments(compartments):
     n_comps = len(compartments)
