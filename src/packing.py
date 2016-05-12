@@ -210,6 +210,3 @@ class PolyPacker(object):
             pack_str = pack_str + skeleton + str(line) + "| "
         return pack_str
 
-pp = PolyPacker([0+0j, 0+10j, 10+10j, 10+0j])
-
-print pp.pack(5.0)
