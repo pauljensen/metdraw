@@ -189,19 +189,19 @@ class Compartment(Parameterized):
         self.compartments = []
         self.subsystems = []
         self.exchanges = []
-        
+
     def add_exchange(self,rxn):
         rxn.set_parent(self)
         self.exchanges.append(rxn)
-        
+
     def add_subsystem(self,sub):
         sub.set_parent(self)
         self.subsystems.append(sub)
-        
+
     def add_compartment(self,comp):
         comp.set_parent(self)
         self.compartments.append(comp)
-    
+
     @property
     def species(self):
         species = set()
@@ -303,8 +303,8 @@ def get_insides(compartments):
         return [(compartments[0].id, compartments[0].compartments[0].id)] + get_insides(compartments[0].compartments)
 
 def get_comps(comps_list):
-    if comps_list[0].compartments == []:
-        return [(comps_list[0], comps_list[0].local_exchanges)]
+    if comps_list == []:
+        return []
     else:
         return [(comps_list[0], comps_list[0].local_exchanges)] + get_comps(comps_list[0].compartments)
 
@@ -374,7 +374,6 @@ def build_model(species,reactions,compartments):
     compartments = nest_compartments(compartments)
     for comp in compartments.values():
         model.add_compartment(comp)
-        
     return model
 
     
