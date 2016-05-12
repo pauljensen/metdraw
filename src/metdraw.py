@@ -83,7 +83,7 @@ def metdraw(filename,count_mets=None,met_file=None,show=False,
     dot_filename = filename + '.dot'
     mets_filename = filename + '.mets'
     gpr_filename = filename + '.gpr'
-    output_filename = filename + '.' + output
+
 
     if not quiet:
         print 'Loading model file', sbml_filename
@@ -98,7 +98,7 @@ def metdraw(filename,count_mets=None,met_file=None,show=False,
                 print 'GPR written to file', gpr_filename
     model.name = filename
     model.set_param(**defaults)
-    
+
     if count_mets:
         if not quiet:
             print 'Writing metabolite counts to file', filename+'.mets'
@@ -121,7 +121,10 @@ def metdraw(filename,count_mets=None,met_file=None,show=False,
         if not quiet:
             print len(minors), "minors found in model"
     model.set_param(name="minors",value=minors)
-        
+
+
+    output_filename = model.id + filename + '.' + output
+
     if show:
         model.display()
         display_parameters(defaults)
@@ -164,7 +167,9 @@ def metdraw(filename,count_mets=None,met_file=None,show=False,
         main_glist = sbml.findall(main_graph, 'g')
         comps_exs = Model.get_exchanges(model)
         comps_pts = Bnd.get_compPts(main_glist)
+        print comps_pts
         insides = dict(Model.get_insides(model.compartments))
+        print insides
         metabDict = Bnd.metab_dict(main_glist)
         for comp in compartments:
             rxnList = comps_exs[comp[0].id]
@@ -270,13 +275,6 @@ def metdraw(filename,count_mets=None,met_file=None,show=False,
                 main_graph[0].append(ex_graph)
                 os.remove('ex.svg')
             main_tree.write(output_filename)
-
-    #trans = sbml.findfirst(main_graph, 'g').get('transform')
-    #trans = Bnd.trans_parse(trans)
-    #tf = 'transform="scale(1 1) rotate(0) translate(%f %f)"' % (trans[0], trans[1])
-    #sbml.findfirst(main_tree, 'g').set('transform', tf)
-    # clean up intermediate DOT file
-    os.remove(dot_filename)
 
 
 def update_defaults(params):
