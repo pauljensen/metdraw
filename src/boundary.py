@@ -1,20 +1,44 @@
-
 from xml.etree.ElementTree import *
 from svg.path import Line, parse_path, Path
 from sbml import findfirst
 
-
 tag = 'ns0:'
 
-#create a point
+# create a point
 def gen_point(x, y):
     return x + y * 1j
 
+# remove 'pt' tag from height/width attribute
 def remove_pt(numb):
     new_numb = numb.replace("pt", '')
     return float(new_numb)
 
-#updated version compatible with metdraw svg output
+# return new transform string given an x,y
+def newTransform(x,y):
+    s = "scale(1 1) "
+    r = "rotate(0) "
+    t = "translate(%f %f)" % (x, y)
+    return s + r + t
+
+# return string of points used for box around compartments
+def polyPts(pts):
+    pt1 = str(pts[0]) + "," + str(pts[3])
+    pt2 = str(pts[0]) + "," + str(pts[1])
+    pt3 = str(pts[2]) + "," + str(pts[1])
+    pt4 = str(pts[2]) + "," + str(pts[3])
+    pt5 = str(pts[0]) + "," + str(pts[3])
+    p = pt1 + ' ' + pt2 + ' ' + pt3 + ' ' + pt4 + ' ' + pt5
+    return p
+
+# return new viewBox
+def newVB(pts):
+    if len(pts) == 1:
+        return str(pts[0])
+    else:
+        p = pts.pop()
+        return newVB(pts) + " " + str(p)
+
+# updated version compatible with metdraw svg output
 def get_box_points_new(compartment_element):
     ptList = []
     ptFinal = []
@@ -32,12 +56,12 @@ def get_box_points_new(compartment_element):
     ptFinal.append(pt4)
     return ptFinal
 
-#generates the exchange membrane path given a list of box points
+# generates line objects for exchange membrane path from list of box points
 def gen_membrane_path(boxPts):
-    x1 = boxPts[0].real #- 50 - 105 #default spacer for now
-    y1 = boxPts[0].imag #- 50 - 105
-    x2 = boxPts[2].real #+ 50 + 105
-    y2 = boxPts[2].imag #+ 50 + 105
+    x1 = boxPts[0].real
+    y1 = boxPts[0].imag
+    x2 = boxPts[2].real
+    y2 = boxPts[2].imag
     point1 = gen_point(x1, y1)
     point2 = gen_point(x1, y2)
     point3 = gen_point(x2, y2)
@@ -49,7 +73,7 @@ def gen_membrane_path(boxPts):
     path = Path(line1, line2, line3, line4)
     return path.d()
 
-#smoothes the reaction edges to look like a continuous line instead of blocked
+# smoothes the reaction edges to look continuous instead of blocked
 def extend_edge(pathElem):
     tag = 'ns0:'
     path = parse_path(pathElem.get('d'))
@@ -63,7 +87,7 @@ def extend_edge(pathElem):
     newPathElem = Element(tag + 'path', attrib={'d': '%s' % pathDef})
     return newPathElem
 
-#gets all g elements that are nodes
+# gets all g elements that are nodes
 def get_nodes(lst):
     nodes = []
     for e in lst:
@@ -73,7 +97,8 @@ def get_nodes(lst):
             else:
                 nodes.append(e)
     return nodes
-#gets all g elements that are edges
+
+# gets all g elements that are edges
 def get_edges(lst):
     edges = []
     for e in lst:
@@ -81,6 +106,7 @@ def get_edges(lst):
             edges.append(e)
     return edges
 
+# see if any rxn metabs are in dict of all metabs in graph
 def metab_overlap(a, b):
     for i in a:
         metab = i.id
@@ -88,6 +114,7 @@ def metab_overlap(a, b):
             return True
     return False
 
+# return the common metab
 def common_metab(a,b):
     for i in a:
         metab = i.id
@@ -95,9 +122,9 @@ def common_metab(a,b):
             return metab
     return None
 
-#creates a dictionary metabolite to its x and y values
-#ex: {'G6P': 500+350j, 'Glu': 900+740j}
-#these values act as 'near' in PolyPacker
+# creates a dictionary metabolite to its x and y values
+# example: {'G6P': 500+350j, 'Glu': 900+740j}
+# these values act as 'near' in PolyPacker
 def metab_dict(glist):
     nodes = get_nodes(glist)
     dct = {}
@@ -110,18 +137,11 @@ def metab_dict(glist):
                 dct[name] = gen_point(x,y)
     return dct
 
-def trans_parse(trans_str):
-    trans = trans_str.split('translate')[1]
-    trans = trans.replace('(', '').replace(')', '')
-    trans = trans.split(' ')
-    for i in range(0, len(trans)):
-        trans[i] = float(trans[i]) + 150.0
-    return trans
-
 def remove_clustertag(s):
     s = s.replace('cluster_', '')
-    return s[0]
+    return s.split('::')[0]
 
+# return list of points where compartment line is drawn
 def get_compPts(glist):
     pts_dict = {}
     for g in glist:
@@ -129,3 +149,88 @@ def get_compPts(glist):
             comp = remove_clustertag(findfirst(g, 'title').text)
             pts_dict[comp] = get_box_points_new(g)
     return pts_dict
+
+# draw a box enclosing the image
+# the coordinates are the size of the file from the viewBox attribute
+def bounding_box(filename):
+    ofile = open((filename), "r+")
+    main_tree = ElementTree(file=ofile)
+    main_graph = main_tree.getroot()
+    dimens = main_graph.attrib
+    ptList = dimens['viewBox'].split(" ")
+    points = polyPts(ptList)
+
+    g_attribs = {'class': "graph", 'id': 'comp1'}
+    boxGraph = Element(tag + 'g', **g_attribs)
+    poly_attribs = {'fill': 'none', 'points': points, 'stroke': 'black'}
+    SubElement(boxGraph, tag + 'polygon', **poly_attribs)
+
+    main_graph.append(boxGraph)
+    main_tree.write(filename)
+    ofile.close()
+    return filename
+
+# combine two SVG compartment files into one
+# if align is true, the image is translated horizontally only
+def combineSVGs(mainfile, compfile, align=False):
+    mfile = open((mainfile), "r+")
+    main_tree = ElementTree(file=mfile)
+    main_graph = main_tree.getroot()
+    cfile = open((compfile), "r+")
+    comp_tree = ElementTree(file=cfile)
+    comp_graph = comp_tree.getroot()
+
+    dimens = main_graph.attrib
+    main_points = dimens['viewBox'].split(" ")
+    main_width = main_points[2]
+    dimens2 = comp_graph.attrib
+    comp_points = dimens2['viewBox'].split(" ")
+    comp_width = comp_points[2]
+    trans_width = float(main_width) + 600
+    new_width = trans_width + float(comp_width)
+    main_points[2] = str(new_width)
+    dimens['width'] = (str(new_width))
+    if float(main_points[3]) > float(comp_points[3]):
+        if align:
+            dimens['height'] = (str(float(main_points[3])))
+            main_points[3] = str(float(main_points[3]))
+        else:
+            dimens['height'] = (str(float(main_points[3]) + 600))
+            main_points[3] = str(float(main_points[3]) + 600)
+    else:
+        if align:
+            main_points[3] = str(float(comp_points[3]))
+            dimens['height'] = (str(float(comp_points[3])))
+        else:
+            main_points[3] = str(float(comp_points[3]) + 600)
+            dimens['height'] = (str(float(comp_points[3]) + 600))
+
+    ptsString = ''
+    for p in main_points:
+        ptsString += p + ' '
+    ptsString = ptsString[:-1]
+
+    if align:
+        transform = "scale(1 1) rotate(0) " + "translate(%s %s)" % (trans_width-600, 0)
+    else:
+        dimens['width'] = (str(int(remove_pt(dimens['width'])) + 600)) + 'pt'
+        dimens['height'] = (str(int(remove_pt(dimens['height'])) + 600)) + 'pt'
+        transform = "scale(1 1) rotate(0) " + "translate(%s %s)" % (trans_width-450, 300)
+    dimens['viewBox'] = ptsString
+    main_graph.set('viewBox', dimens['viewBox'])
+    main_graph.set('height', dimens['height'])
+    main_graph.set('width', dimens['width'])
+
+    # Wrap all elements in main graph in Element called 'boxGraph',
+    # then translate boxGraph to proper location
+    g_attribs = {'class': "graph", 'id': 'trans1', 'transform': transform}
+    boxGraph = Element(tag + 'g', **g_attribs)
+    for e in comp_graph:
+        boxGraph.append(e)
+
+    comp_tree.write(compfile)
+    main_graph.append(boxGraph)
+    main_tree.write(mainfile)
+    mfile.close()
+    cfile.close()
+    return mainfile
