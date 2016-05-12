@@ -44,7 +44,7 @@
     },
     "CLUSTER_MINORS" : false,
     "SHOW_MINORS" : true,
-    "SHOW_EXCHANGES" : false,
+    "SHOW_EXCHANGES" : true,
     "MAX_MINORS" : 1000,
     "COMPACT" : false,
     "METABOLITE_LABEL_TRANSFORM" : "lambda x : x",
