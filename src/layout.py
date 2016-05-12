@@ -2,7 +2,7 @@
 import copy
 
 from graphviz import AttrStmt,Node,Edge,Graph
-from model import Model
+from model import Model, Reaction
 import minors
 
 def reaction_to_dot_new(rxn):
@@ -644,7 +644,7 @@ def compartment_to_dot(compartment):
     label = AttrStmt('graph',label=compartment.name,
                      fontsize=compartment.get_param('COMPARTMENT_FONTSIZE'))
     g.add(label)
-    
+
     SHOW_EXCHANGES = compartment.get_param('SHOW_EXCHANGES')
     if SHOW_EXCHANGES and compartment.local_exchanges:
         gex = Graph(name=compartment.id+"::EX",cluster=True)
@@ -657,19 +657,13 @@ def compartment_to_dot(compartment):
         return g
 
 def compartment_to_dot2(compartment):
-    #SHOW_EXCHANGES = compartment.get_param('SHOW_EXCHANGES')
     g = Graph(name=compartment.id,cluster=True,subgraph=True)
     for subsystem in compartment.subsystems:
         gsub = subsystem_to_dot(subsystem)
         gsub.subgraph = True
         gsub.tag('::'+subsystem.id)
         g.add(gsub)
-    for comp in compartment.compartments:
-        gcomp = compartment_to_dot2(comp)
-        gcomp.subgraph = True
-        gcomp.tag('::'+comp.id)
-        g.add(gcomp)
-
+    g.add(AttrStmt('graph',forcelabels="true"))
     label = AttrStmt('graph',label=compartment.name,
                      fontsize=compartment.get_param('COMPARTMENT_FONTSIZE'))
     g.add(label)
@@ -685,4 +679,13 @@ def model_to_dot(model):
     if model.get_param('FORCE_LABELS'):
         g.add(AttrStmt('graph',forcelabels="true"))
 
+    return g
+
+
+def model_to_dot2(model):
+    g = Graph(name=model.name)
+    gcomp = compartment_to_dot2(model)
+    g.add(gcomp)
+    if model.get_param('FORCE_LABELS'):
+        g.add(AttrStmt('graph',forcelabels="true"))
     return g
